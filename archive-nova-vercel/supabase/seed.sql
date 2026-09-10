@@ -1,0 +1,2 @@
+-- Intentionally empty.
+-- Archive Nova does not ship fake users, works, fandoms, tags, comments or statistics.
