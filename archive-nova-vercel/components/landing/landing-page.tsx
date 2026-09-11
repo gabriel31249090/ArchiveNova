@@ -32,15 +32,16 @@ export function LandingPage() {
   const [fandoms, setFandoms] = useState<LandingFandom[]>([])
 
   useEffect(() => {
-    if (!supabase) return
+  if (!supabase) return
 
-    let active = true
+  const client = supabase
+  let active = true
 
-    async function loadLandingData() {
-      const [statsResponse, fandomResponse] = await Promise.all([
-        supabase.rpc('platform_stats'),
-        supabase.rpc('active_fandoms', { limit_count: 8 }),
-      ])
+  async function loadLandingData() {
+    const [statsResponse, fandomResponse] = await Promise.all([
+      client.rpc('platform_stats'),
+      client.rpc('active_fandoms', { limit_count: 8 }),
+    ])
 
       if (!active) return
 
