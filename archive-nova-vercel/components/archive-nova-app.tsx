@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
@@ -84,7 +85,7 @@ function readFormString(form: FormData, key: string) {
   return String(form.get(key) || '').trim()
 }
 
-export function ArchiveNovaApp() {
+export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: ArchiveView }) {
   const configured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
   const supabase = useMemo(() => configured ? createClient() : null, [configured])
 
@@ -94,7 +95,7 @@ export function ArchiveNovaApp() {
   const authDialog = useRef<HTMLDialogElement>(null)
   const searchInput = useRef<HTMLInputElement>(null)
 
-  const [view, setView] = useState<ArchiveView>('home')
+  const [view, setView] = useState<ArchiveView>(initialView)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [authUser, setAuthUser] = useState<User | null>(null)
   const [stats, setStats] = useState<PlatformStats>(EMPTY_STATS)
@@ -679,13 +680,13 @@ export function ArchiveNovaApp() {
 
       <div className="app-shell">
         <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`} aria-label="Navegação principal">
-          <div className="brand" tabIndex={0}>
+          <Link className="brand brand-link" href="/" aria-label="Voltar para a página inicial">
             <div className="brand-mark" aria-hidden="true">✦</div>
             <div><strong>Archive Nova</strong><span>histórias, bem organizadas</span></div>
-          </div>
+          </Link>
 
           <nav className="nav-stack">
-            <button className={`nav-item ${view === 'home' ? 'active' : ''}`} onClick={() => changeView('home')}><span>⌂</span> Início</button>
+            <Link className="nav-item" href="/"><span>⌂</span> Início</Link>
             <button className={`nav-item ${view === 'explore' ? 'active' : ''}`} onClick={() => changeView('explore')}><span>⌕</span> Explorar</button>
             <button className={`nav-item ${view === 'library' ? 'active' : ''}`} onClick={() => changeView('library')}><span>♡</span> Minha biblioteca</button>
             <button className={`nav-item ${view === 'history' ? 'active' : ''}`} onClick={() => changeView('history')}><span>↺</span> Histórico</button>

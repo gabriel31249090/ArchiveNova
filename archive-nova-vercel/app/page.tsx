@@ -1,5 +1,5 @@
-import { ArchiveNovaApp } from '@/components/archive-nova-app'
+import { LandingPage } from '@/components/landing/landing-page'
 
 export default function HomePage() {
-  return <ArchiveNovaApp />
+  return <LandingPage />
 }
