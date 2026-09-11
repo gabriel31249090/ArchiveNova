@@ -32,16 +32,16 @@ export function LandingPage() {
   const [fandoms, setFandoms] = useState<LandingFandom[]>([])
 
   useEffect(() => {
-  if (!supabase) return
+    if (!supabase) return
 
-  const client = supabase
-  let active = true
+    const client = supabase
+    let active = true
 
-  async function loadLandingData() {
-    const [statsResponse, fandomResponse] = await Promise.all([
-      client.rpc('platform_stats'),
-      client.rpc('active_fandoms', { limit_count: 8 }),
-    ])
+    async function loadLandingData() {
+      const [statsResponse, fandomResponse] = await Promise.all([
+        client.rpc('platform_stats'),
+        client.rpc('active_fandoms', { limit_count: 8 }),
+      ])
 
       if (!active) return
 
@@ -115,7 +115,7 @@ export function LandingPage() {
           </p>
           <div className="landing-hero-actions">
             <Link className="landing-button" href="/explore">Explorar histórias <span>→</span></Link>
-            <Link className="landing-button secondary" href="/explore">Começar a escrever</Link>
+            <Link className="landing-button secondary" href="/write">Começar a escrever</Link>
           </div>
           <div className="landing-proof" aria-label="Estatísticas atuais do Archive Nova">
             <span><strong>{fullNumber(stats.works)}</strong> obras</span>

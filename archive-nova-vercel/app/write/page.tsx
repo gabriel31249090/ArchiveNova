@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { StoryEditor } from '@/components/editor/story-editor'
+import { StoryEditor } from '../../components/editor/story-editor'
 
 export const metadata: Metadata = {
   title: 'Escrever — Archive Nova',

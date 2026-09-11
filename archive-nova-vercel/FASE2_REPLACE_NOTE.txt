@@ -1,0 +1,3 @@
+ArchiveNova v3 Fase 2 FIX
+Substitua a pasta archive-nova-vercel inteira no repositório.
+Este pacote inclui package.json com dependências TipTap e correções de import/tipagem.

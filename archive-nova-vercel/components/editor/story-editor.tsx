@@ -173,7 +173,7 @@ export function StoryEditor() {
         'aria-label': 'Texto do capítulo',
       },
     },
-    onUpdate: ({ editor: currentEditor }) => {
+    onUpdate: ({ editor: currentEditor }: { editor: TiptapEditor }) => {
       const text = currentEditor.getText()
       setContentHtml(currentEditor.getHTML())
       setWordCount(countWords(text))

@@ -732,7 +732,7 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
               <kbd>Ctrl K</kbd>
             </div>
             <button className="secondary-button" onClick={() => { setView('explore'); setFiltersOpen((value) => !value) }}>Filtros</button>
-            <button className="primary-button" onClick={() => requireUser() && publishDialog.current?.showModal()}>＋ Publicar</button>
+            <button className="primary-button" onClick={() => { window.location.href = '/write' }}>＋ Escrever</button>
           </header>
 
           <section className={`view ${view === 'home' ? 'active' : ''}`}>
