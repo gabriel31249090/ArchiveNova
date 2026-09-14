@@ -359,3 +359,11 @@ body:has(.reader-focus-mode) .nova-header,body:has(.reader-focus-mode) .nova-mob
  .group-manager-hero{display:grid;align-items:start}.group-manager-form{grid-template-columns:1fr}.group-manager-form .wide,.group-manager-form-actions{grid-column:1}
  .group-manager-works>header{display:grid}.group-manager-works article{grid-template-columns:42px 1fr}.group-work-actions{grid-column:2;justify-content:flex-start;flex-wrap:wrap}
 }
+
+
+/* live Writer collaboration */
+.writer-live-presence{display:inline-flex;align-items:center;gap:6px;margin-top:9px;color:var(--muted);font-size:9px}
+.writer-live-presence i{width:7px;height:7px;border-radius:50%;background:var(--an-success);box-shadow:0 0 0 3px color-mix(in srgb,var(--an-success) 14%,transparent)}
+.writer-collab-banner{display:flex;align-items:center;justify-content:center;gap:14px;padding:10px 18px;background:color-mix(in srgb,var(--accent) 11%,var(--surface));border-block:1px solid color-mix(in srgb,var(--accent) 35%,var(--border));color:var(--text)}
+.writer-collab-banner>div{display:grid;gap:2px}.writer-collab-banner span{color:var(--muted);font-size:10px}.writer-collab-banner button{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:9px;padding:8px 11px}
+@media(max-width:700px){.writer-collab-banner{align-items:flex-start;flex-direction:column}.writer-collab-banner button{width:100%}}
