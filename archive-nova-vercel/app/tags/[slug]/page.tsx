@@ -1,2 +1,4 @@
-import { TaxonomyPage } from '@/components/taxonomy/taxonomy-page'
-export default async function Page({params}:{params:Promise<{slug:string}>}){const {slug}=await params;return <TaxonomyPage kind="TAG" slug={slug}/>} 
+import { TaxonomySeoShell, taxonomyMetadata } from '@/components/seo/taxonomy-seo-shell'
+
+export async function generateMetadata({params}:{params:Promise<{slug:string}>}){const {slug}=await params;return taxonomyMetadata(slug,'TAG')}
+export default async function Page({params}:{params:Promise<{slug:string}>}){const {slug}=await params;return <TaxonomySeoShell kind="TAG" slug={slug}/>} 
