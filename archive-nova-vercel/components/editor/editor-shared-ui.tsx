@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useEditor } from '@tiptap/react'
 import { FONT_OPTIONS, FONT_SIZE_OPTIONS, LINE_HEIGHT_OPTIONS } from '@/components/editor/editor-extensions'
+import { NovaIcon } from '@/components/ui/nova-icon'
 
 export type TiptapEditor = NonNullable<ReturnType<typeof useEditor>>
 
@@ -265,7 +266,7 @@ export function ImportDialog({
       <section className="writer-import-modal" role="dialog" aria-modal="true" aria-labelledby="import-title">
         <header>
           <div><p className="eyebrow">Importar história</p><h2 id="import-title">{loading ? 'Lendo seu arquivo…' : result ? result.name : 'Não foi possível importar'}</h2></div>
-          <button type="button" onClick={onClose} disabled={loading} aria-label="Fechar">×</button>
+          <button type="button" onClick={onClose} disabled={loading} aria-label="Fechar"><NovaIcon name="close" size={17} /></button>
         </header>
 
         {loading ? (
@@ -357,9 +358,9 @@ export function FindReplacePanel({ editor, onClose }: { editor: TiptapEditor; on
       <div className="writer-find-row">
         <input ref={inputRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Localizar…" aria-label="Localizar" />
         <span>{matches.length ? `${matchIndex + 1}/${matches.length}` : '0/0'}</span>
-        <button type="button" disabled={!matches.length} onClick={() => selectMatch(matchIndex - 1)} aria-label="Resultado anterior">↑</button>
-        <button type="button" disabled={!matches.length} onClick={() => selectMatch(matchIndex + 1)} aria-label="Próximo resultado">↓</button>
-        <button type="button" onClick={onClose} aria-label="Fechar busca">×</button>
+        <button type="button" disabled={!matches.length} onClick={() => selectMatch(matchIndex - 1)} aria-label="Resultado anterior"><NovaIcon name="chevronUp" size={15} /></button>
+        <button type="button" disabled={!matches.length} onClick={() => selectMatch(matchIndex + 1)} aria-label="Próximo resultado"><NovaIcon name="chevronDown" size={15} /></button>
+        <button type="button" onClick={onClose} aria-label="Fechar busca"><NovaIcon name="close" size={15} /></button>
       </div>
       <div className="writer-find-row replace">
         <input value={replacement} onChange={(event) => setReplacement(event.target.value)} placeholder="Substituir por…" aria-label="Substituir por" />
