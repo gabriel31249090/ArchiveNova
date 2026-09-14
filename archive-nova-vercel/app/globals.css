@@ -447,3 +447,16 @@
   .landing-v4 *, .home-v4 *{animation:none!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
   .landing-motion-ready [data-landing-reveal]{opacity:1!important;transform:none!important}
 }
+
+
+/* v4.6 — Admin identity + global announcement */
+.nova-role-chip{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:0 10px;border-radius:999px;text-decoration:none;font-size:11px;font-weight:900;letter-spacing:.08em;border:1px solid var(--border,#ddd6d2);white-space:nowrap}
+.nova-role-chip.admin{background:var(--primary-soft,#f8e7eb);border-color:color-mix(in srgb,var(--primary,#8d1d35) 40%,transparent);color:var(--primary,#8d1d35)}
+.nova-role-chip.moderator{background:var(--surface-secondary,#eeeae4);color:var(--text,#201b1c)}
+.nova-announcement{display:flex;align-items:center;justify-content:center;gap:9px;padding:9px 16px;background:var(--primary,#8d1d35);color:#fff;text-align:center;font-size:13px;line-height:1.35}
+.nova-announcement p{margin:0}.nova-announcement span{font-size:12px}
+.profile-handle-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.profile-role-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:850;line-height:1;border:1px solid var(--border,#ddd6d2)}
+.profile-role-badge.admin{background:var(--primary-soft,#f8e7eb);border-color:color-mix(in srgb,var(--primary,#8d1d35) 40%,transparent);color:var(--primary,#8d1d35)}
+.profile-role-badge.moderator{background:var(--surface-secondary,#eeeae4);color:var(--text,#201b1c)}
+@media(max-width:720px){.nova-role-chip{display:none}.nova-announcement{padding:8px 12px;font-size:12px}}
