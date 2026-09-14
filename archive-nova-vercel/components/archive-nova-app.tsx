@@ -5,6 +5,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type CSSP
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { WorkCard } from '@/components/work-card'
+import { NovaIcon } from '@/components/ui/nova-icon'
 import type {
   ArchiveView,
   AuthMode,
@@ -684,15 +685,15 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
           </Link>
 
           <nav className="nav-stack">
-            <Link className={`nav-item ${view === 'home' ? 'active' : ''}`} href="/home"><span>⌂</span> Início</Link>
-            <button className={`nav-item ${view === 'explore' ? 'active' : ''}`} onClick={() => changeView('explore')}><span>⌕</span> Explorar</button>
-            <Link className="nav-item" href="/feed"><span>✦</span> Feed</Link>
-            <Link className="nav-item" href="/posts"><span>☁</span> Posts</Link>
-            <button className={`nav-item ${view === 'library' ? 'active' : ''}`} onClick={() => changeView('library')}><span>♡</span> Minha biblioteca</button>
-            <button className={`nav-item ${view === 'history' ? 'active' : ''}`} onClick={() => changeView('history')}><span>↺</span> Histórico</button>
-            <Link className="nav-item" href="/dashboard"><span>◫</span> Creator Studio</Link>
-            <Link className="nav-item" href="/notifications"><span>♢</span> Notificações</Link>
-            <Link className="nav-item" href="/faq"><span>?</span> FAQ</Link>
+            <Link className={`nav-item ${view === 'home' ? 'active' : ''}`} href="/home"><span><NovaIcon name="archive" size={18} /></span> Início</Link>
+            <button className={`nav-item ${view === 'explore' ? 'active' : ''}`} onClick={() => changeView('explore')}><span><NovaIcon name="search" size={18} /></span> Explorar</button>
+            <Link className="nav-item" href="/feed"><span><NovaIcon name="feed" size={18} /></span> Feed</Link>
+            <Link className="nav-item" href="/posts"><span><NovaIcon name="posts" size={18} /></span> Posts</Link>
+            <button className={`nav-item ${view === 'library' ? 'active' : ''}`} onClick={() => changeView('library')}><span><NovaIcon name="book" size={18} /></span> Minha biblioteca</button>
+            <button className={`nav-item ${view === 'history' ? 'active' : ''}`} onClick={() => changeView('history')}><span><NovaIcon name="history" size={18} /></span> Histórico</button>
+            <Link className="nav-item" href="/dashboard"><span><NovaIcon name="studio" size={18} /></span> Creator Studio</Link>
+            <Link className="nav-item" href="/notifications"><span><NovaIcon name="bell" size={18} /></span> Notificações</Link>
+            <Link className="nav-item" href="/faq"><span><NovaIcon name="help" size={18} /></span> FAQ</Link>
           </nav>
 
           <div className="sidebar-section">
@@ -721,9 +722,9 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
 
         <main className="main" id="main">
           <header className="topbar">
-            <button className="icon-button menu-button" onClick={() => setSidebarOpen((value) => !value)} aria-label="Abrir menu">☰</button>
+            <button className="icon-button menu-button" onClick={() => setSidebarOpen((value) => !value)} aria-label={sidebarOpen ? 'Fechar menu' : 'Abrir menu'}><NovaIcon name="menu" size={20} /></button>
             <div className="global-search">
-              <span aria-hidden="true">⌕</span>
+              <span aria-hidden="true"><NovaIcon name="search" size={18} /></span>
               <input
                 ref={searchInput}
                 type="search"
@@ -735,7 +736,7 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
               <kbd>Ctrl K</kbd>
             </div>
             <button className="secondary-button" onClick={() => { setView('explore'); setFiltersOpen((value) => !value) }}>Filtros{activeFilterCount ? ` (${activeFilterCount})` : ''}</button>
-            <button className="primary-button" onClick={() => { window.location.href = '/write' }}>＋ Escrever</button>
+            <button className="primary-button nova-button-with-icon" onClick={() => { window.location.href = '/write' }}><NovaIcon name="write" size={17} /> Escrever</button>
           </header>
 
           <section className={`view home-v4 ${view === 'home' ? 'active' : ''}`}>
@@ -765,10 +766,10 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
             </section>
 
             <section className="home-v4-shortcuts" aria-label="Atalhos do Archive Nova">
-              <Link href="/feed"><span>✦</span><div><strong>Para você</strong><small>Recomendações explicadas</small></div><b>→</b></Link>
-              <Link href="/posts"><span>☁</span><div><strong>Comunidade</strong><small>Posts, enquetes e conversas</small></div><b>→</b></Link>
-              <Link href="/write"><span>✎</span><div><strong>Continuar escrevendo</strong><small>Writer Cloud e autosave</small></div><b>→</b></Link>
-              <Link href="/dashboard"><span>◫</span><div><strong>Creator Studio</strong><small>Obras, drafts e métricas</small></div><b>→</b></Link>
+              <Link href="/feed"><span><NovaIcon name="feed" size={19} /></span><div><strong>Para você</strong><small>Recomendações explicadas</small></div><b><NovaIcon name="arrowRight" size={16} /></b></Link>
+              <Link href="/posts"><span><NovaIcon name="posts" size={19} /></span><div><strong>Comunidade</strong><small>Posts, enquetes e conversas</small></div><b><NovaIcon name="arrowRight" size={16} /></b></Link>
+              <Link href="/write"><span><NovaIcon name="write" size={19} /></span><div><strong>Continuar escrevendo</strong><small>Writer Cloud e autosave</small></div><b><NovaIcon name="arrowRight" size={16} /></b></Link>
+              <Link href="/dashboard"><span><NovaIcon name="studio" size={19} /></span><div><strong>Creator Studio</strong><small>Obras, drafts e métricas</small></div><b><NovaIcon name="arrowRight" size={16} /></b></Link>
             </section>
 
             <section className="section-block home-v4-section">
@@ -818,7 +819,7 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
                 <span>Ir para Posts →</span>
               </Link>
               <Link href="/faq" className="home-v4-help-card">
-                <span>?</span>
+                <span><NovaIcon name="help" size={22} /></span>
                 <div><strong>Precisa de ajuda?</strong><p>Veja como publicar, colaborar, apoiar autores e usar os recursos do Archive Nova.</p></div>
                 <b>FAQ →</b>
               </Link>
