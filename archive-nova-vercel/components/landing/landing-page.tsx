@@ -93,11 +93,13 @@ export function LandingPage() {
   }, [supabase])
 
   useEffect(() => {
+    const root = document.documentElement
     const elements = Array.from(document.querySelectorAll<HTMLElement>('[data-landing-reveal]'))
+    root.classList.add('landing-motion-ready')
 
     if (!('IntersectionObserver' in window)) {
       elements.forEach((element) => element.classList.add('is-visible'))
-      return
+      return () => root.classList.remove('landing-motion-ready')
     }
 
     const observer = new IntersectionObserver(
@@ -112,7 +114,10 @@ export function LandingPage() {
     )
 
     elements.forEach((element) => observer.observe(element))
-    return () => observer.disconnect()
+    return () => {
+      observer.disconnect()
+      root.classList.remove('landing-motion-ready')
+    }
   }, [])
 
   const statValue = (value: number) => (dataReady ? fullNumber(value) : '—')
