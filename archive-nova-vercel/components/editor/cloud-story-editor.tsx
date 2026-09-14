@@ -183,7 +183,8 @@ export function CloudStoryEditor({ draftId }: { draftId: string }) {
       await channel
         .on('presence', { event: 'sync' }, () => {
           const state = channel.presenceState()
-          setLiveEditors(Math.max(1, Object.keys(state).length))
+          const count = Object.values(state).reduce((sum, presences) => sum + presences.length, 0)
+          setLiveEditors(Math.max(1, count))
         })
         .on('broadcast', { event: 'draft-saved' }, ({ payload }) => {
           const event = (payload || {}) as { user_id?: string; chapter_id?: string }
