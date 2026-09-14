@@ -18,6 +18,10 @@ function textFromHtml(html:string){
     .replace(/\n{3,}/g,'\n\n').trim()
 }
 
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
+}
+
 function safeName(value:string){
   return (value||'archive-nova').normalize('NFKD').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-').slice(0,80)||'archive-nova'
 }
@@ -81,7 +85,7 @@ export async function GET(request:NextRequest,{params}:{params:Promise<{id:strin
     }
     const doc=new Document({sections:[{properties:{},children}]})
     const bytes=await Packer.toBuffer(doc)
-    return new NextResponse(new Uint8Array(bytes),{headers:{'content-type':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','content-disposition':'attachment; filename="'+file+'.docx"'}})
+    return new NextResponse(toArrayBuffer(new Uint8Array(bytes)),{headers:{'content-type':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','content-disposition':'attachment; filename="'+file+'.docx"'}})
   }
 
   if(format==='pdf'){
@@ -104,7 +108,7 @@ export async function GET(request:NextRequest,{params}:{params:Promise<{id:strin
       if(ch.after){y-=5;for(const line of wrap('Nota final: '+ch.after,80))addLine(line,10)}
     }
     const bytes=await pdf.save()
-    return new NextResponse(bytes,{headers:{'content-type':'application/pdf','content-disposition':'attachment; filename="'+file+'.pdf"'}})
+    return new NextResponse(toArrayBuffer(bytes),{headers:{'content-type':'application/pdf','content-disposition':'attachment; filename="'+file+'.pdf"'}})
   }
 
   const zip=new JSZip()
@@ -118,5 +122,5 @@ export async function GET(request:NextRequest,{params}:{params:Promise<{id:strin
   zip.file('OEBPS/nav.xhtml','<!doctype html><html xmlns="http://www.w3.org/1999/xhtml"><head><title>Sumário</title></head><body><nav epub:type="toc" xmlns:epub="http://www.idpf.org/2007/ops"><h1>Sumário</h1><ol>'+navItems+'</ol></nav></body></html>')
   chapterList.forEach((ch,i)=>zip.file('OEBPS/chapter-'+(i+1)+'.xhtml','<!doctype html><html xmlns="http://www.w3.org/1999/xhtml"><head><title>'+esc(ch.title)+'</title></head><body><h1>'+esc('Capítulo '+ch.number+' — '+ch.title)+'</h1>'+ch.text.split(/\n+/).filter(Boolean).map(p=>'<p>'+esc(p)+'</p>').join('')+'</body></html>'))
   const bytes=await zip.generateAsync({type:'uint8array',compression:'DEFLATE'})
-  return new NextResponse(bytes,{headers:{'content-type':'application/epub+zip','content-disposition':'attachment; filename="'+file+'.epub"'}})
+  return new NextResponse(toArrayBuffer(bytes),{headers:{'content-type':'application/epub+zip','content-disposition':'attachment; filename="'+file+'.epub"'}})
 }
