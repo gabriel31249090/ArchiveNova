@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { NovaHeader } from '@/components/shared/nova-header'
+import { NovaIcon } from '@/components/ui/nova-icon'
+import { useNovaConfirm } from '@/components/ui/nova-confirm'
 import type { CreatorDashboardTotals, CreatorRecentComment, WorkCardData } from '@/lib/types'
 import type { CloudDraftListItem } from '@/lib/cloud-drafts'
 
@@ -27,6 +29,7 @@ function statusLabel(value: WorkCardData['status']) { return value === 'COMPLETE
 export function CreatorDashboard() {
   const configured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
   const supabase = useMemo(() => configured ? createClient() : null, [configured])
+  const { ask: confirmAction, dialog: confirmDialog } = useNovaConfirm()
   const [user, setUser] = useState<User | null>(null)
   const [username, setUsername] = useState('')
   const [displayName, setDisplayName] = useState('')
@@ -104,12 +107,21 @@ export function CreatorDashboard() {
     const { data, error: duplicateError } = await supabase.rpc('duplicate_writer_draft', { target_draft: id })
     if (duplicateError) { setError('Não foi possível duplicar o rascunho.'); return }
     await refreshDrafts()
-    if (data && window.confirm('Cópia criada. Abrir agora?')) window.location.href = `/write/${String(data)}`
+    if (data && await confirmAction({
+      title: 'Cópia criada',
+      description: 'Deseja abrir o novo rascunho agora?',
+      confirmLabel: 'Abrir rascunho',
+    })) window.location.href = `/write/${String(data)}`
   }
 
   async function deleteDraft(item: CloudDraftListItem) {
     if (!supabase) return
-    if (!window.confirm(`Excluir o rascunho “${item.title || 'Sem título'}”? Essa ação não pode ser desfeita.`)) return
+    if (!(await confirmAction({
+      title: `Excluir “${item.title || 'Sem título'}”?`,
+      description: 'Esse rascunho será excluído permanentemente e não poderá ser recuperado pela interface.',
+      confirmLabel: 'Excluir rascunho',
+      tone: 'danger',
+    }))) return
     const { error: deleteError } = await supabase.rpc('delete_writer_draft', { target_draft: item.id })
     if (deleteError) { setError('Não foi possível excluir o rascunho.'); return }
     setDrafts((current) => current.filter((draft) => draft.id !== item.id))
@@ -131,7 +143,7 @@ export function CreatorDashboard() {
       <main className="studio-page">
         <section className="studio-hero">
           <div><p className="eyebrow">Creator Studio</p><h1>Olá, {displayName || username}.</h1><p>Seu arquivo criativo, suas métricas e tudo que precisa de atenção em um só lugar.</p></div>
-          <div className="studio-hero-actions"><Link className="secondary-button" href={`/users/${encodeURIComponent(username)}`}>Ver perfil público</Link><Link className="primary-button large" href="/write">＋ Nova história</Link></div>
+          <div className="studio-hero-actions"><Link className="secondary-button" href={`/users/${encodeURIComponent(username)}`}>Ver perfil público</Link><Link className="primary-button large" href="/write"><NovaIcon name="write" size={17} /> Nova história</Link></div>
         </section>
 
         {error ? <div className="studio-alert error">{error}</div> : null}
@@ -169,7 +181,7 @@ export function CreatorDashboard() {
             <section className="studio-quick-actions">
               <Link href="/write"><span>✎</span><div><strong>Escrever</strong><small>Começar uma nova história</small></div><b>→</b></Link>
               <button onClick={() => setTab('drafts')}><span>☁</span><div><strong>Seus rascunhos</strong><small>{drafts.length ? `${drafts.length} sincronizado${drafts.length === 1 ? '' : 's'}` : 'Nenhum rascunho ainda'}</small></div><b>→</b></button>
-              <Link href="/notifications"><span>♢</span><div><strong>Ver atividade</strong><small>{totals.unread_notifications ? `${totals.unread_notifications} não lidas` : 'Tudo em dia'}</small></div><b>→</b></Link>
+              <Link href="/notifications"><span><NovaIcon name="bell" size={19} /></span><div><strong>Ver atividade</strong><small>{totals.unread_notifications ? `${totals.unread_notifications} não lidas` : 'Tudo em dia'}</small></div><b>→</b></Link>
             </section>
           </div>
         ) : null}
@@ -177,7 +189,7 @@ export function CreatorDashboard() {
         {tab === 'works' ? (
           <section className="studio-works-section">
             <div className="studio-works-toolbar">
-              <div className="studio-search"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar nas suas obras…" /></div>
+              <div className="studio-search"><span><NovaIcon name="search" size={17} /></span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar nas suas obras…" /></div>
               <div className="studio-filter-row">{([['ALL','Todas'],['ONGOING','Em andamento'],['COMPLETE','Concluídas'],['HIATUS','Hiato'],['DRAFT','Rascunhos']] as const).map(([value,label]) => <button key={value} className={filter === value ? 'active' : ''} onClick={() => setFilter(value)}>{label}</button>)}</div>
             </div>
             {filteredWorks.length ? <div className="studio-work-list">{filteredWorks.map((work) => <article key={work.id} className="studio-work-row"><div className="studio-work-rating">{work.rating === 'GENERAL' ? 'G' : work.rating === 'TEEN' ? 'T' : work.rating === 'MATURE' ? 'M' : work.rating === 'EXPLICIT' ? 'E' : '?'}</div><div className="studio-work-copy"><div className="studio-work-title"><Link href={`/works/${work.id}`}>{work.title}</Link><span className={`studio-status ${work.status.toLowerCase()}`}>{statusLabel(work.status)}</span></div><p>{work.summary || 'Sem resumo.'}</p><div className="studio-work-tags">{work.fandoms.slice(0,2).map((tag) => <span key={tag}>{tag}</span>)}</div></div><div className="studio-work-numbers"><span><strong>{fmt(work.word_count)}</strong> palavras</span><span><strong>{fmt(work.hits_count)}</strong> leituras</span><span><strong>{fmt(work.kudos_count)}</strong> kudos</span><span><strong>{work.chapter_count}{work.expected_chapters ? `/${work.expected_chapters}` : ''}</strong> capítulos</span></div><div className="studio-work-actions"><small>Atualizada {date(work.updated_at)}</small><Link className="secondary-button" href={`/works/${work.id}/manage`}>Gerenciar</Link></div></article>)}</div> : <div className="studio-empty large"><span>⌕</span><h2>Nenhuma obra encontrada</h2><p>Tente outro filtro ou comece uma nova história.</p><Link className="primary-button" href="/write">Nova história</Link></div>}
@@ -196,6 +208,7 @@ export function CreatorDashboard() {
             <div className="studio-panel activity-large"><header><div><p className="eyebrow">Comentários</p><h2>Conversas nas suas histórias</h2><p>Os comentários mais recentes de todas as suas obras.</p></div><Link className="primary-button" href="/notifications">Central de notificações</Link></header>{comments.length ? <div className="studio-comment-feed expanded">{comments.map((comment) => <article key={comment.id}><Link className="studio-avatar" href={`/users/${encodeURIComponent(comment.username)}`}>{comment.display_name.slice(0,1).toUpperCase()}</Link><div><p><strong>{comment.display_name}</strong> · <Link href={`/works/${comment.work_id}`}>{comment.work_title}</Link> · capítulo {comment.chapter_number}</p><blockquote>{comment.body}</blockquote><small>{date(comment.created_at)}</small></div></article>)}</div> : <div className="studio-empty"><span>☁</span><p>Ainda não há comentários recentes.</p></div>}</div>
           </section>
         ) : null}
+        {confirmDialog}
       </main>
     </>
   )
