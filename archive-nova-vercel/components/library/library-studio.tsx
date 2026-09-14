@@ -94,22 +94,22 @@ export function LibraryStudio(){
       </section>
 
       <section className="library-studio-section"><header><div><p className="eyebrow">Séries</p><h2>Suas narrativas em sequência</h2></div><span>{series.length}</span></header>
-        <div className="library-manage-list">{series.map(item=><article key={item.id}><div><strong>{item.title}</strong><p>{item.summary||'Sem descrição.'}</p><small>{item.count} obra(s) · {item.visibility}</small></div><div className="library-manage-actions"><select defaultValue="" onChange={e=>{if(e.target.value){void attach('SERIES',item.id,e.target.value);e.currentTarget.value=''}}}><option value="">Adicionar uma obra sua…</option>{works.map(work=><option key={work.id} value={work.id}>{work.title}</option>)}</select><Link href={'/series/'+item.id}>Abrir série</Link></div></article>)}</div>
+        <div className="library-manage-list">{series.map(item=><article key={item.id}><div><strong>{item.title}</strong><p>{item.summary||'Sem descrição.'}</p><small>{item.count} obra(s) · {item.visibility}</small></div><div className="library-manage-actions"><select defaultValue="" onChange={e=>{if(e.target.value){void attach('SERIES',item.id,e.target.value);e.currentTarget.value=''}}}><option value="">Adicionar uma obra sua…</option>{works.map(work=><option key={work.id} value={work.id}>{work.title}</option>)}</select><Link href={'/dashboard/library/series/'+item.id}>Gerenciar</Link><Link href={'/series/'+item.id}>Página pública</Link></div></article>)}</div>
       </section>
 
       <section className="library-studio-section"><header><div><p className="eyebrow">Coleções</p><h2>Curadorias maiores</h2></div><span>{collections.length}</span></header>
-        <div className="library-manage-list">{collections.map(item=><AttachCard key={item.id} title={item.name} description={item.description||''} count={item.count} href={'/collections/'+item.id} onAttach={value=>attach('COLLECTION',item.id,value)}/>)}</div>
+        <div className="library-manage-list">{collections.map(item=><AttachCard key={item.id} title={item.name} description={item.description||''} count={item.count} href={'/collections/'+item.id} manageHref={'/dashboard/library/collections/'+item.id} onAttach={value=>attach('COLLECTION',item.id,value)}/>)}</div>
       </section>
 
       <section className="library-studio-section"><header><div><p className="eyebrow">Estantes</p><h2>Listas pessoais compartilháveis</h2></div><span>{shelves.length}</span></header>
-        <div className="library-manage-list">{shelves.map(item=><AttachCard key={item.id} title={item.name} description={item.description||''} count={item.count} href={'/shelves/'+item.id} onAttach={value=>attach('SHELF',item.id,value)}/>)}</div>
+        <div className="library-manage-list">{shelves.map(item=><AttachCard key={item.id} title={item.name} description={item.description||''} count={item.count} href={'/shelves/'+item.id} manageHref={'/dashboard/library/shelves/'+item.id} onAttach={value=>attach('SHELF',item.id,value)}/>)}</div>
       </section>
       {message?<div className="reader-page-toast" role="status">{message}</div>:null}
     </main>
   </>
 }
 
-function AttachCard({title,description,count,href,onAttach}:{title:string;description:string;count:number;href:string;onAttach:(value:string)=>void}){
+function AttachCard({title,description,count,href,manageHref,onAttach}:{title:string;description:string;count:number;href:string;manageHref:string;onAttach:(value:string)=>void}){
   const [value,setValue]=useState('')
-  return <article><div><strong>{title}</strong><p>{description||'Sem descrição.'}</p><small>{count} obra(s)</small></div><div className="library-manage-actions"><div className="library-attach"><input value={value} onChange={e=>setValue(e.target.value)} placeholder="Cole link ou UUID da obra"/><button onClick={()=>{if(value.trim()){onAttach(value);setValue('')}}}>Adicionar</button></div><Link href={href}>Abrir</Link></div></article>
+  return <article><div><strong>{title}</strong><p>{description||'Sem descrição.'}</p><small>{count} obra(s)</small></div><div className="library-manage-actions"><div className="library-attach"><input value={value} onChange={e=>setValue(e.target.value)} placeholder="Cole link ou UUID da obra"/><button onClick={()=>{if(value.trim()){onAttach(value);setValue('')}}}>Adicionar</button></div><Link href={manageHref}>Gerenciar</Link><Link href={href}>Página pública</Link></div></article>
 }
