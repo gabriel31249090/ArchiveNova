@@ -61,7 +61,7 @@ returns trigger
 language plpgsql
 security definer
 set search_path = public, auth, pg_temp
-as $
+as $$
 begin
   if auth.uid() is not null and not exists (
     select 1 from public.profiles p
@@ -73,9 +73,9 @@ begin
   if tg_op = 'DELETE' then return old; end if;
   return new;
 end;
-$;
+$$;
 
-do $
+do $$
 declare
   table_name text;
 begin
@@ -98,7 +98,7 @@ begin
     );
   end loop;
 end;
-$;
+$$;
 
 -- Public content from suspended/deleted creators disappears for normal readers,
 -- while the owner and staff can still inspect it.
@@ -108,7 +108,7 @@ language sql
 stable
 security definer
 set search_path = public, auth, pg_temp
-as $
+as $$
   select exists (
     select 1
     from public.works w
@@ -127,7 +127,7 @@ as $
         )
       )
   );
-$;
+$$;
 
 create or replace function public.can_read_post(target_post uuid)
 returns boolean
@@ -135,7 +135,7 @@ language sql
 stable
 security definer
 set search_path = public, auth, pg_temp
-as $
+as $$
   select exists (
     select 1
     from public.community_posts cp
@@ -171,7 +171,7 @@ as $
         )
       )
   );
-$;
+$$;
 
 grant execute on function public.can_read_work(uuid) to anon, authenticated;
 grant execute on function public.can_read_post(uuid) to anon, authenticated;
@@ -216,7 +216,7 @@ language sql
 stable
 security definer
 set search_path = public, pg_temp
-as $
+as $$
   select coalesce(
     (
       select jsonb_build_object(
@@ -234,7 +234,7 @@ as $
       'allow_new_ad_requests', true
     )
   );
-$;
+$$;
 
 revoke execute on function public.platform_public_settings() from public;
 grant execute on function public.platform_public_settings() to anon, authenticated;
@@ -616,7 +616,7 @@ begin
     ), '[]'::jsonb)
   );
 end;
-$;
+$$;
 
 create or replace function public.admin_set_work_hidden(target_work uuid, hide boolean default true)
 returns void
@@ -665,7 +665,7 @@ returns void
 language plpgsql
 security definer
 set search_path = public, auth, pg_temp
-as $
+as $$
 begin
   if not public.is_admin() then raise exception 'ADMIN_ONLY' using errcode = '42501'; end if;
 
@@ -679,14 +679,14 @@ begin
   insert into public.audit_log(actor_user_id, action, entity_type, entity_id)
   values(auth.uid(), case when hide then 'COMMENT_ADMIN_HIDDEN' else 'COMMENT_ADMIN_RESTORED' end, 'COMMENT', target_comment);
 end;
-$;
+$$;
 
 create or replace function public.admin_set_post_comment_hidden(target_comment uuid, hide boolean default true)
 returns void
 language plpgsql
 security definer
 set search_path = public, auth, pg_temp
-as $
+as $$
 begin
   if not public.is_admin() then raise exception 'ADMIN_ONLY' using errcode = '42501'; end if;
 
@@ -700,7 +700,7 @@ begin
   insert into public.audit_log(actor_user_id, action, entity_type, entity_id)
   values(auth.uid(), case when hide then 'POST_COMMENT_ADMIN_HIDDEN' else 'POST_COMMENT_ADMIN_RESTORED' end, 'POST_COMMENT', target_comment);
 end;
-$;
+$$;
 
 -- -----------------------------------------------------------------------------
 -- 7. Taxonomy administration
@@ -828,7 +828,7 @@ returns void
 language plpgsql
 security definer
 set search_path = public, auth, pg_temp
-as $
+as $$
 declare
   source_type text;
   target_type text;
