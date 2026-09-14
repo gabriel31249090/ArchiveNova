@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { compactNumber, fullNumber } from '@/lib/format'
+import { NovaIcon, type NovaIconName } from '@/components/ui/nova-icon'
 
 type LandingStats = {
   works: number
@@ -22,14 +23,14 @@ type LandingFandom = {
 
 const EMPTY_STATS: LandingStats = { works: 0, fandoms: 0, users: 0, words: 0 }
 
-const PLATFORM_FEATURES = [
-  ['Writer Cloud', 'Rascunhos sincronizados entre dispositivos, autosave e capítulos organizados.', '/write', '✎'],
-  ['Feed transparente', 'Recomendações com o motivo de cada história aparecer para você.', '/feed', '✦'],
-  ['Posts da comunidade', 'Atualizações, imagens, enquetes e conversas entre leitores e escritores.', '/posts', '☁'],
-  ['Colaboração revisável', 'Contribuições inspiradas em pull requests: revisar, pedir mudanças e mesclar.', '/faq', '⑂'],
-  ['Apoio direto', 'Autores podem compartilhar PIX e outros meios de apoio sem intermediação.', '/support', '♡'],
-  ['Busca sem ranking secreto', 'Fandoms, tags, classificação, tamanho e filtros continuam sob seu controle.', '/explore', '⌕'],
-] as const
+const PLATFORM_FEATURES: ReadonlyArray<readonly [string, string, string, NovaIconName]> = [
+  ['Writer Cloud', 'Rascunhos sincronizados entre dispositivos, autosave e capítulos organizados.', '/write', 'cloud'],
+  ['Feed transparente', 'Recomendações com o motivo de cada história aparecer para você.', '/feed', 'feed'],
+  ['Posts da comunidade', 'Atualizações, imagens, enquetes e conversas entre leitores e escritores.', '/posts', 'posts'],
+  ['Colaboração revisável', 'Contribuições inspiradas em pull requests: revisar, pedir mudanças e mesclar.', '/faq', 'branch'],
+  ['Apoio direto', 'Autores podem compartilhar PIX e outros meios de apoio sem intermediação.', '/support', 'heart'],
+  ['Busca sem ranking secreto', 'Fandoms, tags, classificação, tamanho e filtros continuam sob seu controle.', '/explore', 'search'],
+]
 
 export function LandingPage() {
   const configured = Boolean(
@@ -170,9 +171,9 @@ export function LandingPage() {
           </div>
 
           <div className="landing-v4-trust">
-            <span><b>✦</b> recomendações explicáveis</span>
-            <span><b>✓</b> rascunhos na nuvem</span>
-            <span><b>⑂</b> colaboração revisável</span>
+            <span><b aria-hidden="true">✦</b> recomendações explicáveis</span>
+            <span><b><NovaIcon name="cloud" size={15} /></b> rascunhos na nuvem</span>
+            <span><b><NovaIcon name="branch" size={15} /></b> colaboração revisável</span>
           </div>
         </div>
 
@@ -189,14 +190,14 @@ export function LandingPage() {
             </header>
             <div className="landing-v4-preview-body">
               <aside>
-                <span className="active">✦</span>
-                <span>⌕</span>
-                <span>☁</span>
-                <span>♡</span>
-                <span>✎</span>
+                <span className="active"><NovaIcon name="archive" size={15} /></span>
+                <span><NovaIcon name="search" size={15} /></span>
+                <span><NovaIcon name="posts" size={15} /></span>
+                <span><NovaIcon name="heart" size={15} /></span>
+                <span><NovaIcon name="write" size={15} /></span>
               </aside>
               <section>
-                <div className="landing-v4-preview-search">⌕ <span>buscar histórias, tags, fandoms…</span></div>
+                <div className="landing-v4-preview-search"><NovaIcon name="search" size={14} /> <span>buscar histórias, tags, fandoms…</span></div>
                 <div className="landing-v4-preview-reason">✦ Porque você acompanha este fandom</div>
                 <article>
                   <div className="landing-v4-preview-cover">A</div>
@@ -219,13 +220,13 @@ export function LandingPage() {
           </div>
 
           <div className="landing-v4-float float-cloud">
-            <span>☁</span><div><strong>Writer Cloud</strong><small>salvo automaticamente</small></div><b>✓</b>
+            <span><NovaIcon name="cloud" size={17} /></span><div><strong>Writer Cloud</strong><small>salvo automaticamente</small></div><b><NovaIcon name="check" size={15} /></b>
           </div>
           <div className="landing-v4-float float-collab">
-            <span>⑂</span><div><strong>Contribuição #14</strong><small>pronta para revisão</small></div><b>＋</b>
+            <span><NovaIcon name="branch" size={17} /></span><div><strong>Contribuição #14</strong><small>pronta para revisão</small></div><b><NovaIcon name="check" size={15} /></b>
           </div>
           <div className="landing-v4-float float-post">
-            <span>♥</span><div><strong>Comunidade</strong><small>posts, enquetes e comentários</small></div>
+            <span><NovaIcon name="posts" size={17} /></span><div><strong>Comunidade</strong><small>posts, enquetes e comentários</small></div>
           </div>
         </div>
       </section>
@@ -267,7 +268,7 @@ export function LandingPage() {
         <div className="landing-v4-feature-grid">
           {PLATFORM_FEATURES.map(([title, description, href, icon], index) => (
             <Link className={'landing-v4-feature-card feature-' + (index + 1)} href={href} key={title}>
-              <div className="landing-v4-feature-top"><span>{icon}</span><small>0{index + 1}</small></div>
+              <div className="landing-v4-feature-top"><span><NovaIcon name={icon} size={21} /></span><small>0{index + 1}</small></div>
               <h3>{title}</h3>
               <p>{description}</p>
               <b>Conhecer recurso →</b>
@@ -316,12 +317,12 @@ export function LandingPage() {
               <span><i style={{ width: '72%' }} />Mais capítulos</span>
               <span><i style={{ width: '46%' }} />Nova história</span>
             </div>
-            <footer><span>♥ 128</span><span>☁ 34</span><span>↗ compartilhar</span></footer>
+            <footer><span><NovaIcon name="heart" size={13} />128</span><span><NovaIcon name="posts" size={13} />34</span><span><NovaIcon name="share" size={13} />compartilhar</span></footer>
           </div>
           <div className="landing-v4-contribution-card">
-            <span>⑂</span>
+            <span><NovaIcon name="branch" size={19} /></span>
             <div><small>CONTRIBUIÇÃO</small><strong>Correção de continuidade no capítulo 4</strong><p>2 revisões · pronta para mesclar</p></div>
-            <b>✓</b>
+            <b><NovaIcon name="check" size={16} /></b>
           </div>
         </div>
 
