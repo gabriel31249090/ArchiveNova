@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from 'react'
 import { EditorContent, useEditor } from '@tiptap/react'
 import { createClient } from '@/lib/supabase/client'
+import { useNovaConfirm } from '@/components/ui/nova-confirm'
 import { type CloudDraft, type CloudDraftChapter, readCloudMirror, writeCloudMirror, clearCloudMirror } from '@/lib/cloud-drafts'
 import {
   createArchiveEditorExtensions,
@@ -396,6 +397,7 @@ export function CloudStoryEditor({ draftId }: { draftId: string }) {
   const fileInput = useRef<HTMLInputElement>(null)
   const configured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
   const supabase = useMemo(() => configured ? createClient() : null, [configured])
+  const { ask: confirmAction, dialog: confirmDialog } = useNovaConfirm()
   const savingRef = useRef(false)
   const queuedSaveRef = useRef(false)
   const saveFunctionRef = useRef<() => Promise<void>>(async () => undefined)
@@ -668,7 +670,12 @@ export function CloudStoryEditor({ draftId }: { draftId: string }) {
   async function deleteChapter() {
     if (!online) { setNotice('Conecte-se à internet para excluir um capítulo.'); return }
     if (!supabase || chapters.length <= 1) { setNotice('O rascunho precisa ter pelo menos um capítulo.'); return }
-    if (!window.confirm('Excluir este capítulo do rascunho? Essa ação não pode ser desfeita.')) return
+    if (!(await confirmAction({
+      title: 'Excluir capítulo do rascunho?',
+      description: 'Esta ação não pode ser desfeita. O rascunho continuará com os outros capítulos.',
+      confirmLabel: 'Excluir capítulo',
+      tone: 'danger',
+    }))) return
     const nextId = chapters.find((item) => item.id !== activeChapterId)?.id
     const { error } = await supabase.rpc('delete_writer_draft_chapter', { target_chapter: activeChapterId })
     if (error) { setNotice('Não foi possível excluir o capítulo.'); return }
@@ -770,6 +777,7 @@ export function CloudStoryEditor({ draftId }: { draftId: string }) {
       {dragActive ? <div className="writer-drop-overlay"><div><span>⇧</span><strong>Solte para importar</strong><p>DOCX, PDF, TXT, Markdown, HTML ou RTF</p></div></div> : null}
       {importOpen ? <ImportDialog result={importResult} mode={importMode} loading={importLoading} error={importError} onModeChange={setImportMode} onApply={applyImport} onClose={() => { if (!importLoading) setImportOpen(false) }} /> : null}
       {notice ? <div className="writer-toast writer-toast-v5" role="status">{notice}</div> : null}
-    </main>
+      {confirmDialog}
+      </main>
   )
 }
