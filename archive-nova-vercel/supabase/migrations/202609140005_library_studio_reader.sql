@@ -685,6 +685,112 @@ begin
 end;
 $;
 
+create or replace function public.update_series_info(
+  target_series uuid,
+  next_title text,
+  next_summary text,
+  next_visibility text
+)
+returns void
+language plpgsql
+security definer
+set search_path=public,auth,pg_temp
+as $
+declare normalized text:=upper(coalesce(next_visibility,'PUBLIC'));
+begin
+  if normalized not in ('PUBLIC','UNLISTED','PRIVATE') then raise exception 'INVALID_VISIBILITY'; end if;
+  update public.series
+  set title=btrim(next_title),summary=coalesce(next_summary,''),visibility=normalized,updated_at=now()
+  where id=target_series and owner_id=auth.uid();
+  if not found then raise exception 'SERIES_NOT_FOUND' using errcode='P0002'; end if;
+end;
+$;
+
+create or replace function public.reorder_series_works(target_series uuid, ordered_work_ids uuid[])
+returns void
+language plpgsql
+security definer
+set search_path=public,auth,pg_temp
+as $
+declare expected integer; supplied integer; item uuid; pos integer:=0;
+begin
+  if not exists(select 1 from public.series where id=target_series and owner_id=auth.uid()) then raise exception 'SERIES_NOT_FOUND' using errcode='P0002'; end if;
+  select count(*) into expected from public.series_works where series_id=target_series;
+  supplied:=coalesce(cardinality(ordered_work_ids),0);
+  if expected<>supplied or (select count(distinct x) from unnest(ordered_work_ids) x)<>expected then raise exception 'INVALID_SERIES_ORDER'; end if;
+  if exists(select 1 from unnest(ordered_work_ids) x where not exists(select 1 from public.series_works sw where sw.series_id=target_series and sw.work_id=x)) then raise exception 'FOREIGN_WORK_IN_SERIES'; end if;
+  update public.series_works set position=position+100000 where series_id=target_series;
+  foreach item in array ordered_work_ids loop
+    pos:=pos+1;
+    update public.series_works set position=pos where series_id=target_series and work_id=item;
+  end loop;
+  update public.series set updated_at=now() where id=target_series;
+end;
+$;
+
+create or replace function public.delete_series(target_series uuid)
+returns void language plpgsql security definer set search_path=public,auth,pg_temp as $
+begin
+  delete from public.series where id=target_series and owner_id=auth.uid();
+  if not found then raise exception 'SERIES_NOT_FOUND' using errcode='P0002'; end if;
+end; $;
+
+create or replace function public.update_collection_info(
+  target_collection uuid,next_name text,next_description text,next_visibility text
+)
+returns void language plpgsql security definer set search_path=public,auth,pg_temp as $
+declare normalized text:=upper(coalesce(next_visibility,'PUBLIC'));
+begin
+  if normalized not in ('PUBLIC','UNLISTED','PRIVATE') then raise exception 'INVALID_VISIBILITY'; end if;
+  update public.collections set name=btrim(next_name),description=nullif(btrim(coalesce(next_description,'')),''),
+    visibility=normalized,updated_at=now()
+  where id=target_collection and owner_id=auth.uid();
+  if not found then raise exception 'COLLECTION_NOT_FOUND' using errcode='P0002'; end if;
+end; $;
+
+create or replace function public.delete_collection(target_collection uuid)
+returns void language plpgsql security definer set search_path=public,auth,pg_temp as $
+begin
+  delete from public.collections where id=target_collection and owner_id=auth.uid();
+  if not found then raise exception 'COLLECTION_NOT_FOUND' using errcode='P0002'; end if;
+end; $;
+
+create or replace function public.update_shelf_info(
+  target_shelf uuid,next_name text,next_description text,next_visibility text
+)
+returns void language plpgsql security definer set search_path=public,auth,pg_temp as $
+declare normalized text:=upper(coalesce(next_visibility,'PUBLIC'));
+begin
+  if normalized not in ('PUBLIC','UNLISTED','PRIVATE') then raise exception 'INVALID_VISIBILITY'; end if;
+  update public.shelves set name=btrim(next_name),description=nullif(btrim(coalesce(next_description,'')),''),
+    visibility=normalized,updated_at=now()
+  where id=target_shelf and owner_id=auth.uid();
+  if not found then raise exception 'SHELF_NOT_FOUND' using errcode='P0002'; end if;
+end; $;
+
+create or replace function public.reorder_shelf_works(target_shelf uuid, ordered_work_ids uuid[])
+returns void language plpgsql security definer set search_path=public,auth,pg_temp as $
+declare expected integer; supplied integer; item uuid; pos integer:=0;
+begin
+  if not exists(select 1 from public.shelves where id=target_shelf and owner_id=auth.uid()) then raise exception 'SHELF_NOT_FOUND' using errcode='P0002'; end if;
+  select count(*) into expected from public.shelf_items where shelf_id=target_shelf;
+  supplied:=coalesce(cardinality(ordered_work_ids),0);
+  if expected<>supplied or (select count(distinct x) from unnest(ordered_work_ids) x)<>expected then raise exception 'INVALID_SHELF_ORDER'; end if;
+  if exists(select 1 from unnest(ordered_work_ids) x where not exists(select 1 from public.shelf_items si where si.shelf_id=target_shelf and si.work_id=x)) then raise exception 'FOREIGN_WORK_IN_SHELF'; end if;
+  foreach item in array ordered_work_ids loop
+    pos:=pos+1;
+    update public.shelf_items set position=pos where shelf_id=target_shelf and work_id=item;
+  end loop;
+  update public.shelves set updated_at=now() where id=target_shelf;
+end; $;
+
+create or replace function public.delete_shelf(target_shelf uuid)
+returns void language plpgsql security definer set search_path=public,auth,pg_temp as $
+begin
+  delete from public.shelves where id=target_shelf and owner_id=auth.uid();
+  if not found then raise exception 'SHELF_NOT_FOUND' using errcode='P0002'; end if;
+end; $;
+
 -- -----------------------------------------------------------------------------
 -- Chapter version history
 -- -----------------------------------------------------------------------------
@@ -1362,6 +1468,14 @@ grant execute on function public.my_series_and_collections() to authenticated;
 grant execute on function public.create_collection(text,text,text) to authenticated;
 grant execute on function public.set_collection_work(uuid,uuid,boolean) to authenticated;
 grant execute on function public.get_collection(uuid) to anon,authenticated;
+grant execute on function public.update_series_info(uuid,text,text,text) to authenticated;
+grant execute on function public.reorder_series_works(uuid,uuid[]) to authenticated;
+grant execute on function public.delete_series(uuid) to authenticated;
+grant execute on function public.update_collection_info(uuid,text,text,text) to authenticated;
+grant execute on function public.delete_collection(uuid) to authenticated;
+grant execute on function public.update_shelf_info(uuid,text,text,text) to authenticated;
+grant execute on function public.reorder_shelf_works(uuid,uuid[]) to authenticated;
+grant execute on function public.delete_shelf(uuid) to authenticated;
 grant execute on function public.chapter_version_history(uuid) to authenticated;
 grant execute on function public.restore_chapter_version(uuid) to authenticated;
 grant execute on function public.schedule_chapter(uuid,timestamptz) to authenticated;
