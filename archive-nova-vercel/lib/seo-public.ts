@@ -122,3 +122,35 @@ export async function getPublicProfileSitemapEntries() {
     return []
   }
 }
+
+
+export async function getPublicTaxonomySitemapEntries() {
+  try {
+    const supabase = seoClient()
+    if (!supabase) return [] as Array<{ kind:string; slug:string; updatedAt:string|null }>
+    const { data, error } = await supabase.rpc('public_taxonomy_sitemap')
+    if (error) return []
+    return ((data || []) as Array<Record<string,unknown>>).map((row) => ({
+      kind: String(row.kind || 'TAG'),
+      slug: String(row.slug || ''),
+      updatedAt: row.updated_at ? String(row.updated_at) : null,
+    })).filter((row) => row.slug)
+  } catch { return [] }
+}
+
+export async function getPublicListSitemapEntries() {
+  try {
+    const supabase = seoClient()
+    if (!supabase) return [] as Array<{ kind:'series'|'collections'|'shelves'; id:string; updatedAt:string|null }>
+    const [series, collections, shelves] = await Promise.all([
+      supabase.from('series').select('id,updated_at').eq('visibility','PUBLIC').limit(3000),
+      supabase.from('collections').select('id,updated_at').eq('visibility','PUBLIC').limit(3000),
+      supabase.from('shelves').select('id,updated_at').eq('visibility','PUBLIC').limit(3000),
+    ])
+    const out:Array<{ kind:'series'|'collections'|'shelves'; id:string; updatedAt:string|null }> = []
+    for (const row of (series.data || []) as Array<Record<string,unknown>>) out.push({kind:'series',id:String(row.id),updatedAt:row.updated_at?String(row.updated_at):null})
+    for (const row of (collections.data || []) as Array<Record<string,unknown>>) out.push({kind:'collections',id:String(row.id),updatedAt:row.updated_at?String(row.updated_at):null})
+    for (const row of (shelves.data || []) as Array<Record<string,unknown>>) out.push({kind:'shelves',id:String(row.id),updatedAt:row.updated_at?String(row.updated_at):null})
+    return out
+  } catch { return [] }
+}
