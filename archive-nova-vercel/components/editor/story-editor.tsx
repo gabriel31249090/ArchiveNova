@@ -391,6 +391,7 @@ function FindReplacePanel({ editor, onClose }: { editor: TiptapEditor; onClose: 
 }
 
 export function StoryEditor() {
+  const { ask: confirmAction, dialog: confirmDialog } = useNovaConfirm()
   const fileInput = useRef<HTMLInputElement>(null)
   const [title, setTitle] = useState('')
   const [chapterTitle, setChapterTitle] = useState('')
@@ -540,9 +541,14 @@ export function StoryEditor() {
     }
   }
 
-  function createNewDraft() {
+  async function createNewDraft() {
     const hasContent = Boolean(title.trim() || chapterTitle.trim() || editor?.getText().trim())
-    if (hasContent && !window.confirm('Criar um novo rascunho? O rascunho atual será apagado deste navegador.')) return
+    if (hasContent && !(await confirmAction({
+      title: 'Criar um novo rascunho?',
+      description: 'O rascunho local atual será apagado deste navegador.',
+      confirmLabel: 'Criar novo rascunho',
+      tone: 'danger',
+    }))) return
     localStorage.removeItem(DRAFT_STORAGE_KEY)
     setTitle('')
     setChapterTitle('')
@@ -637,7 +643,7 @@ export function StoryEditor() {
 
         <div className="writer-topbar-actions">
           <Link className="writer-nav-link" href="/explore">Explorar</Link>
-          <button className="writer-action-button subtle writer-desktop-action" type="button" onClick={createNewDraft}>Novo</button>
+          <button className="writer-action-button subtle writer-desktop-action" type="button" onClick={() => void createNewDraft()}>Novo</button>
           <button className="writer-action-button subtle" type="button" onClick={() => fileInput.current?.click()}>Importar</button>
           <input ref={fileInput} type="file" className="writer-hidden-input" accept={SUPPORTED_IMPORTS} onChange={importFile} />
           <button className="writer-action-button subtle writer-desktop-action" type="button" onClick={toggleFullscreen}>{fullscreen ? 'Sair da tela cheia' : 'Tela cheia'}</button>
@@ -688,6 +694,7 @@ export function StoryEditor() {
       {dragActive ? <div className="writer-drop-overlay"><div><span>⇧</span><strong>Solte para importar</strong><p>DOCX, PDF, TXT, Markdown, HTML ou RTF</p></div></div> : null}
       {importOpen ? <ImportDialog result={importResult} mode={importMode} loading={importLoading} error={importError} onModeChange={setImportMode} onApply={applyImport} onClose={() => { if (!importLoading) setImportOpen(false) }} /> : null}
       {notice ? <div className="writer-toast writer-toast-v5" role="status">{notice}</div> : null}
-    </main>
+      {confirmDialog}
+      </main>
   )
 }
