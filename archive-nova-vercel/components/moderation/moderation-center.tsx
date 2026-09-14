@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { NovaHeader } from '@/components/shared/nova-header'
+import { NovaIcon } from '@/components/ui/nova-icon'
+import { useNovaConfirm } from '@/components/ui/nova-confirm'
 import type { ModerationReport } from '@/lib/types'
 
 function reasonLabel(reason: string) {
@@ -14,6 +16,7 @@ function reasonLabel(reason: string) {
 export function ModerationCenter() {
   const configured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
   const supabase = useMemo(() => configured ? createClient() : null, [configured])
+  const { ask: confirmAction, dialog: confirmDialog } = useNovaConfirm()
   const [user, setUser] = useState<User | null>(null)
   const [role, setRole] = useState('USER')
   const [reports, setReports] = useState<ModerationReport[]>([])
@@ -63,7 +66,12 @@ export function ModerationCenter() {
 
   async function hideComment(report: ModerationReport) {
     if (!supabase || !report.comment_id) return
-    if (!window.confirm('Ocultar este comentário da área pública?')) return
+    if (!(await confirmAction({
+      title: 'Ocultar comentário?',
+      description: 'O comentário deixará de aparecer na área pública. A denúncia continuará disponível para revisão.',
+      confirmLabel: 'Ocultar comentário',
+      tone: 'danger',
+    }))) return
     setBusyId(report.id)
     const { error: actionError } = await supabase.rpc('moderate_comment', { target_comment: report.comment_id, hide: true })
     setBusyId('')
@@ -93,7 +101,8 @@ export function ModerationCenter() {
         {error ? <div className="studio-alert error">{error}</div> : null}
         {message ? <div className="studio-alert success">{message}</div> : null}
         <section className="moderation-stats"><div><strong>{reports.length}</strong><span>pendentes</span></div><div><strong>{reports.filter((report) => report.status === 'OPEN').length}</strong><span>novas</span></div><div><strong>{reports.filter((report) => report.status === 'REVIEWING').length}</strong><span>em revisão</span></div></section>
-        {reports.length ? <div className="moderation-list">{reports.map((report) => <article className="moderation-card" key={report.id}><header><div className="moderation-reason"><span>{reasonLabel(report.reason)}</span><b className={report.status.toLowerCase()}>{report.status === 'REVIEWING' ? 'Em revisão' : 'Nova'}</b></div><small>{new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(report.created_at))}</small></header><div className="moderation-target"><span>{report.work_id ? 'OBRA' : 'COMENTÁRIO'}</span>{report.work_id ? <><Link href={`/works/${report.work_id}`}><h2>{report.work_title || 'Obra denunciada'}</h2></Link></> : <><h2>Comentário de @{report.comment_author_username || 'usuário'}</h2><blockquote>{report.comment_body || 'Comentário indisponível.'}</blockquote></>}</div>{report.details ? <div className="moderation-details"><strong>Relato de @{report.reporter_username || 'usuário'}</strong><p>{report.details}</p></div> : <div className="moderation-details"><strong>Relato</strong><p>O usuário não acrescentou detalhes.</p></div>}<footer>{report.work_id ? <button className="danger-button" disabled={busyId === report.id} onClick={() => void hideWork(report)}>Ocultar obra</button> : <button className="danger-button" disabled={busyId === report.id} onClick={() => void hideComment(report)}>Ocultar comentário</button>}<div><button className="ghost-button" disabled={busyId === report.id} onClick={() => void setStatus(report, 'DISMISSED')}>Descartar</button>{report.status === 'OPEN' ? <button className="secondary-button" disabled={busyId === report.id} onClick={() => void setStatus(report, 'REVIEWING')}>Assumir revisão</button> : null}<button className="primary-button" disabled={busyId === report.id} onClick={() => void setStatus(report, 'RESOLVED')}>Resolver</button></div></footer></article>)}</div> : <div className="studio-empty moderation-empty"><span>✓</span><h2>Fila limpa</h2><p>Não há denúncias abertas ou em revisão.</p></div>}
+        {reports.length ? <div className="moderation-list">{reports.map((report) => <article className="moderation-card" key={report.id}><header><div className="moderation-reason"><span>{reasonLabel(report.reason)}</span><b className={report.status.toLowerCase()}>{report.status === 'REVIEWING' ? 'Em revisão' : 'Nova'}</b></div><small>{new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(report.created_at))}</small></header><div className="moderation-target"><span>{report.work_id ? 'OBRA' : 'COMENTÁRIO'}</span>{report.work_id ? <><Link href={`/works/${report.work_id}`}><h2>{report.work_title || 'Obra denunciada'}</h2></Link></> : <><h2>Comentário de @{report.comment_author_username || 'usuário'}</h2><blockquote>{report.comment_body || 'Comentário indisponível.'}</blockquote></>}</div>{report.details ? <div className="moderation-details"><strong>Relato de @{report.reporter_username || 'usuário'}</strong><p>{report.details}</p></div> : <div className="moderation-details"><strong>Relato</strong><p>O usuário não acrescentou detalhes.</p></div>}<footer>{report.work_id ? <button className="danger-button" disabled={busyId === report.id} onClick={() => void hideWork(report)}>Ocultar obra</button> : <button className="danger-button" disabled={busyId === report.id} onClick={() => void hideComment(report)}>Ocultar comentário</button>}<div><button className="ghost-button" disabled={busyId === report.id} onClick={() => void setStatus(report, 'DISMISSED')}>Descartar</button>{report.status === 'OPEN' ? <button className="secondary-button" disabled={busyId === report.id} onClick={() => void setStatus(report, 'REVIEWING')}>Assumir revisão</button> : null}<button className="primary-button" disabled={busyId === report.id} onClick={() => void setStatus(report, 'RESOLVED')}>Resolver</button></div></footer></article>)}</div> : <div className="studio-empty moderation-empty"><span><NovaIcon name="check" size={30} /></span><h2>Fila limpa</h2><p>Não há denúncias abertas ou em revisão.</p></div>}
+        {confirmDialog}
       </main>
     </>
   )
