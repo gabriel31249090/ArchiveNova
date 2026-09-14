@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { NovaHeader } from '@/components/shared/nova-header'
 import { SponsoredCard } from '@/components/ads/sponsored-card'
 import { WorkCard } from '@/components/work-card'
+import { NovaIcon } from '@/components/ui/nova-icon'
 import type { DiscoveryItem, WorkCardData } from '@/lib/types'
 
 type Mode = 'RECOMMENDED' | 'RECENT'
@@ -62,7 +63,7 @@ export function DiscoveryFeed() {
         {loading ? <div className="feed-skeleton">{Array.from({ length: 6 }).map((_, index) => <div key={index} />)}</div> : null}
         {error ? <div className="community-message error">{error}</div> : null}
         {!loading && !error ? <section className="discovery-grid">{items.map((item, index) => <div className="discovery-item" key={item.work.id}><div className="recommendation-reason"><span>✦</span>{item.reason}</div><WorkCard work={item.work} onOpen={(id) => { window.location.href = `/works/${id}` }} onBookmark={(work) => void toggleBookmark(work)} />{index === 4 ? <SponsoredCard placement="FEED" /> : null}</div>)}</section> : null}
-        {!loading && !error && !items.length ? <div className="studio-empty large"><span>⌕</span><h2>Ainda estamos conhecendo seus gostos</h2><p>Leia, salve e siga autores. O feed fica melhor conforme você usa o Archive Nova.</p><Link className="primary-button" href="/explore">Explorar histórias</Link></div> : null}
+        {!loading && !error && !items.length ? <div className="studio-empty large"><span><NovaIcon name="search" size={30} /></span><h2>Ainda estamos conhecendo seus gostos</h2><p>Leia, salve e siga autores. O feed fica melhor conforme você usa o Archive Nova.</p><Link className="primary-button" href="/explore">Explorar histórias</Link></div> : null}
       </main>
     </>
   )
