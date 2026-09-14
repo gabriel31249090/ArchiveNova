@@ -90,6 +90,8 @@ export async function getPublicWorkSitemapEntries() {
       .select('id,updated_at')
       .eq('visibility', 'PUBLIC')
       .neq('status', 'DRAFT')
+      .is('deleted_at', null)
+      .not('published_at', 'is', null)
       .order('updated_at', { ascending: false })
       .limit(5000)
     if (error) return []
