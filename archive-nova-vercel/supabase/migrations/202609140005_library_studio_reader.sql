@@ -166,8 +166,17 @@ begin
       scroll_offset = excluded.scroll_offset,
       completed = excluded.completed,
       last_read_at = excluded.last_read_at;
+
+  update public.library_entries
+  set state = case
+        when pct >= 98 then 'COMPLETED'
+        when pct > 1 and state = 'TO_READ' then 'READING'
+        else state
+      end,
+      updated_at = now()
+  where user_id = uid and work_id = target_work;
 end;
-$$;
+$;
 
 create or replace function public.get_reading_progress(target_work uuid)
 returns jsonb
