@@ -37,11 +37,13 @@ export async function generateMetadata({ params }: WorkRouteProps): Promise<Meta
       publishedTime: work.publishedAt || undefined,
       modifiedTime: work.updatedAt || undefined,
       authors: work.authorUsername ? [absoluteUrl(`/users/${encodeURIComponent(work.authorUsername)}`)] : undefined,
+      images: [{ url: absoluteUrl(`/api/og/work/${encodeURIComponent(work.id)}`), width: 1200, height: 630, alt: work.title }],
     },
     twitter: {
-      card: 'summary',
+      card: 'summary_large_image',
       title: work.title,
       description,
+      images: [absoluteUrl(`/api/og/work/${encodeURIComponent(work.id)}`)],
     },
     robots: { index: true, follow: true },
   }
@@ -53,24 +55,37 @@ export default async function WorkPage({ params }: WorkRouteProps) {
 
   const jsonLd = work ? {
     '@context': 'https://schema.org',
-    '@type': 'CreativeWork',
-    name: work.title,
-    description: cleanDescription(work.summary, `Leia “${work.title}” no Archive Nova.`, 500),
-    url: absoluteUrl(`/works/${encodeURIComponent(work.id)}`),
-    inLanguage: work.language,
-    datePublished: work.publishedAt || undefined,
-    dateModified: work.updatedAt || undefined,
-    keywords: [...work.fandoms, ...work.tags].join(', '),
-    author: {
-      '@type': 'Person',
-      name: work.authorName,
-      url: work.authorUsername ? absoluteUrl(`/users/${encodeURIComponent(work.authorUsername)}`) : undefined,
-    },
-    publisher: {
-      '@type': 'Organization',
-      name: 'Archive Nova',
-      url: absoluteUrl('/'),
-    },
+    '@graph': [
+      {
+        '@type': 'CreativeWork',
+        name: work.title,
+        description: cleanDescription(work.summary, `Leia “${work.title}” no Archive Nova.`, 500),
+        url: absoluteUrl(`/works/${encodeURIComponent(work.id)}`),
+        image: absoluteUrl(`/api/og/work/${encodeURIComponent(work.id)}`),
+        inLanguage: work.language,
+        datePublished: work.publishedAt || undefined,
+        dateModified: work.updatedAt || undefined,
+        keywords: [...work.fandoms, ...work.tags].join(', '),
+        author: {
+          '@type': 'Person',
+          name: work.authorName,
+          url: work.authorUsername ? absoluteUrl(`/users/${encodeURIComponent(work.authorUsername)}`) : undefined,
+        },
+        publisher: {
+          '@type': 'Organization',
+          name: 'Archive Nova',
+          url: absoluteUrl('/'),
+        },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Archive Nova', item: absoluteUrl('/') },
+          { '@type': 'ListItem', position: 2, name: 'Explorar', item: absoluteUrl('/explore') },
+          { '@type': 'ListItem', position: 3, name: work.title, item: absoluteUrl(`/works/${encodeURIComponent(work.id)}`) },
+        ],
+      },
+    ],
   } : null
 
   return (
