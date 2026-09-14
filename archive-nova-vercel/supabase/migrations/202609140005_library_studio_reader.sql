@@ -542,6 +542,45 @@ as $$
   where c.id=target_collection and (c.visibility in ('PUBLIC','UNLISTED') or c.owner_id=auth.uid());
 $$;
 
+-- Enrich public work detail with series membership.
+create or replace function public.get_work_detail(target_work uuid)
+returns jsonb
+language plpgsql
+stable
+set search_path = public, pg_temp
+as $
+declare
+  work_json jsonb;
+  chapters_json jsonb;
+begin
+  select to_jsonb(wc) || jsonb_build_object(
+    'kudosed', exists(select 1 from public.kudos k where k.work_id = wc.id and k.user_id = auth.uid()),
+    'bookmarked', exists(select 1 from public.bookmarks b where b.work_id = wc.id and b.user_id = auth.uid()),
+    'subscribed', exists(select 1 from public.work_subscriptions sub where sub.work_id = wc.id and sub.user_id = auth.uid()),
+    'series', coalesce((
+      select jsonb_agg(jsonb_build_object('id',s.id,'title',s.title,'position',sw.position) order by sw.position)
+      from public.series_works sw
+      join public.series s on s.id=sw.series_id
+      where sw.work_id=wc.id
+        and (s.visibility in ('PUBLIC','UNLISTED') or s.owner_id=auth.uid())
+    ), '[]'::jsonb)
+  )
+  into work_json
+  from public.public_work_cards wc
+  where wc.id=target_work;
+
+  if work_json is null then raise exception 'WORK_NOT_FOUND' using errcode='P0002'; end if;
+
+  select coalesce(jsonb_agg(to_jsonb(c) order by c.chapter_number), '[]'::jsonb)
+  into chapters_json
+  from public.chapters c
+  where c.work_id=target_work
+    and (c.status='PUBLISHED' or exists(select 1 from public.works w where w.id=target_work and w.creator_id=auth.uid()));
+
+  return jsonb_build_object('work',work_json,'chapters',chapters_json);
+end;
+$;
+
 -- -----------------------------------------------------------------------------
 -- Chapter version history
 -- -----------------------------------------------------------------------------
