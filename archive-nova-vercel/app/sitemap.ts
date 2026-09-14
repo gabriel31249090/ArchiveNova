@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { absoluteUrl } from '@/lib/site'
-import { getPublicWorkSitemapEntries } from '@/lib/seo-public'
+import { getPublicProfileSitemapEntries, getPublicWorkSitemapEntries } from '@/lib/seo-public'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,7 +15,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: absoluteUrl('/advertise'), lastModified: now, changeFrequency: 'monthly', priority: 0.4 },
   ]
 
-  const works = await getPublicWorkSitemapEntries()
+  const [works, profiles] = await Promise.all([
+    getPublicWorkSitemapEntries(),
+    getPublicProfileSitemapEntries(),
+  ])
   const workRoutes: MetadataRoute.Sitemap = works.map((work) => ({
     url: absoluteUrl(`/works/${encodeURIComponent(work.id)}`),
     lastModified: work.updatedAt ? new Date(work.updatedAt) : now,
@@ -23,5 +26,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }))
 
-  return [...staticRoutes, ...workRoutes]
+  const profileRoutes: MetadataRoute.Sitemap = profiles.map((profile) => ({
+    url: absoluteUrl(`/users/${encodeURIComponent(profile.username)}`),
+    lastModified: profile.updatedAt ? new Date(profile.updatedAt) : now,
+    changeFrequency: 'weekly',
+    priority: 0.6,
+  }))
+
+  return [...staticRoutes, ...workRoutes, ...profileRoutes]
 }
