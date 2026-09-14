@@ -31,7 +31,7 @@ export function SupportSettings() {
   const [projectMessage, setProjectMessage] = useState('')
   const [loading, setLoading] = useState(true)
 
-  const isStaff = role === 'ADMIN' || role === 'MODERATOR'
+  const isAdmin = role === 'ADMIN'
 
   useEffect(() => {
     if (!supabase) { setLoading(false); return }
@@ -47,7 +47,7 @@ export function SupportSettings() {
       const supportResponse = await supabase.from('creator_support_profiles').select('*').eq('user_id', user.id).maybeSingle()
       if (supportResponse.data) setValues(supportResponse.data as SupportProfile)
 
-      if (nextRole === 'ADMIN' || nextRole === 'MODERATOR') {
+      if (nextRole === 'ADMIN') {
         const projectResponse = await supabase.from('project_support_config').select('*').eq('id', 1).maybeSingle()
         if (projectResponse.data) setProjectValues(projectResponse.data as SupportProfile)
       }
@@ -69,7 +69,7 @@ export function SupportSettings() {
 
   async function saveProject(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!supabase || !isStaff) return
+    if (!supabase || !isAdmin) return
     setProjectMessage('Salvando…')
     const { error } = await supabase.from('project_support_config').upsert({ id: 1, ...projectValues })
     if (error) { console.error(error); setProjectMessage('Não foi possível salvar o apoio ao projeto.') }
@@ -82,6 +82,6 @@ export function SupportSettings() {
 
     <form className="support-settings-card" onSubmit={saveCreator}><div className="support-settings-title"><div><p className="eyebrow">Escritor</p><h2>Meu apoio</h2></div><span>Visível no seu perfil</span></div><SupportFields values={values} onChange={field} /><footer><span>{message}</span><button className="primary-button">Salvar meu apoio</button></footer></form>
 
-    {isStaff ? <form className="support-settings-card project-support-admin" onSubmit={saveProject}><div className="support-settings-title"><div><p className="eyebrow">Administração</p><h2>Apoio ao projeto</h2></div><Link href="/support">Visualizar /support →</Link></div><SupportFields values={projectValues} onChange={projectField} project /><footer><span>{projectMessage}</span><button className="primary-button">Salvar apoio do projeto</button></footer></form> : null}
+    {isAdmin ? <form className="support-settings-card project-support-admin" onSubmit={saveProject}><div className="support-settings-title"><div><p className="eyebrow">Administração</p><h2>Apoio ao projeto</h2></div><Link href="/support">Visualizar /support →</Link></div><SupportFields values={projectValues} onChange={projectField} project /><footer><span>{projectMessage}</span><button className="primary-button">Salvar apoio do projeto</button></footer></form> : null}
   </main></>
 }
