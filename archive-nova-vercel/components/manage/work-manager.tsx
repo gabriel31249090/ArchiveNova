@@ -9,6 +9,8 @@ import { RichTextField } from '@/components/editor/rich-text-field'
 import { TaxonomyPicker } from '@/components/taxonomy/taxonomy-picker'
 import { sanitizeStoryHtml } from '@/lib/writer-draft'
 import type { Chapter, WorkCardData } from '@/lib/types'
+import { NovaIcon } from '@/components/ui/nova-icon'
+import { useNovaConfirm } from '@/components/ui/nova-confirm'
 
 function normalizeWork(row: Record<string, unknown>): WorkCardData {
   return {
@@ -64,6 +66,7 @@ export function WorkManager({ workId }: { workId: string }) {
   const router = useRouter()
   const configured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
   const supabase = useMemo(() => configured ? createClient() : null, [configured])
+  const { ask: confirmAction, dialog: confirmDialog } = useNovaConfirm()
   const [user, setUser] = useState<User | null>(null)
   const [work, setWork] = useState<WorkCardData | null>(null)
   const [chapters, setChapters] = useState<Chapter[]>([])
@@ -209,7 +212,12 @@ export function WorkManager({ workId }: { workId: string }) {
 
   async function removeChapter(chapter: Chapter) {
     if (!supabase) return
-    if (!window.confirm(`Excluir “${chapterLabel(chapter)}”? Comentários desse capítulo também serão excluídos.`)) return
+    if (!(await confirmAction({
+      title: `Excluir “${chapterLabel(chapter)}”?`,
+      description: 'Comentários desse capítulo também serão excluídos. Essa ação não pode ser desfeita pela interface.',
+      confirmLabel: 'Excluir capítulo',
+      tone: 'danger',
+    }))) return
     setBusy(true)
     setError('')
     const { error: deleteError } = await supabase.rpc('delete_chapter', { target_chapter: chapter.id })
@@ -275,7 +283,12 @@ export function WorkManager({ workId }: { workId: string }) {
   async function removeWork() {
     if (!supabase || !work) return
     if (deleteConfirmation !== work.title) return setError('Digite o título exato da obra para confirmar.')
-    if (!window.confirm('Esta obra será removida do ArchiveNova. Continuar?')) return
+    if (!(await confirmAction({
+      title: 'Excluir esta obra?',
+      description: 'A obra será removida do ArchiveNova e deixará de aparecer para leitores.',
+      confirmLabel: 'Excluir obra',
+      tone: 'danger',
+    }))) return
     setBusy(true)
     const { error: deleteError } = await supabase.rpc('delete_work', { target_work: work.id })
     setBusy(false)
@@ -301,7 +314,7 @@ export function WorkManager({ workId }: { workId: string }) {
       <header className="manage-topbar">
         <Link className="publish-brand" href="/"><span>✦</span><strong>Archive Nova</strong></Link>
         <div className="manage-breadcrumb"><Link href="/dashboard">Creator Studio</Link><b>/</b><strong>{work.title}</strong></div>
-        <div className="manage-top-actions"><Link href={`/works/${work.id}`}>Ver obra</Link><Link href={`/works/${work.id}/contribute`}>⑂ Colaboração</Link><Link className="primary-button" href="/write">＋ Escrever</Link></div>
+        <div className="manage-top-actions"><Link href={`/works/${work.id}`}>Ver obra</Link><Link className="nova-inline-icon" href={`/works/${work.id}/contribute`}><NovaIcon name="branch" size={16} />Colaboração</Link><Link className="primary-button nova-button-with-icon" href="/write"><NovaIcon name="write" size={16} />Escrever</Link></div>
       </header>
 
       <div className="manage-shell">
@@ -309,8 +322,8 @@ export function WorkManager({ workId }: { workId: string }) {
           <div className="manage-work-heading"><span className="rating-badge">{work.rating === 'GENERAL' ? 'G' : work.rating === 'TEEN' ? 'T' : work.rating === 'MATURE' ? 'M' : work.rating === 'EXPLICIT' ? 'E' : '?'}</span><div><strong>{work.title}</strong><small>{work.chapter_count} cap. · {work.word_count.toLocaleString('pt-BR')} palavras</small></div></div>
           <nav>
             <button className={tab === 'overview' ? 'active' : ''} onClick={() => setTab('overview')}><span>⌘</span><div><strong>Visão geral</strong><small>Metadados e publicação</small></div></button>
-            <button className={tab === 'chapters' ? 'active' : ''} onClick={() => setTab('chapters')}><span>☷</span><div><strong>Capítulos</strong><small>Editar, ordenar e excluir</small></div></button>
-            <button className={tab === 'danger' ? 'active danger' : 'danger'} onClick={() => setTab('danger')}><span>⚠</span><div><strong>Zona de perigo</strong><small>Excluir obra</small></div></button>
+            <button className={tab === 'chapters' ? 'active' : ''} onClick={() => setTab('chapters')}><span><NovaIcon name="book" size={18} /></span><div><strong>Capítulos</strong><small>Editar, ordenar e excluir</small></div></button>
+            <button className={tab === 'danger' ? 'active danger' : 'danger'} onClick={() => setTab('danger')}><span><NovaIcon name="warning" size={18} /></span><div><strong>Zona de perigo</strong><small>Excluir obra</small></div></button>
           </nav>
           <div className="manage-stats"><div><strong>{work.hits_count.toLocaleString('pt-BR')}</strong><span>leituras</span></div><div><strong>{work.kudos_count.toLocaleString('pt-BR')}</strong><span>kudos</span></div><div><strong>{work.bookmarks_count.toLocaleString('pt-BR')}</strong><span>salvos</span></div><div><strong>{work.comments_count.toLocaleString('pt-BR')}</strong><span>comentários</span></div></div>
         </aside>
@@ -358,7 +371,7 @@ export function WorkManager({ workId }: { workId: string }) {
                       <div className="chapter-card-actions"><button className="danger-button" disabled={busy} onClick={() => void removeChapter(chapter)}>Excluir capítulo</button><button className="primary-button" disabled={busy} onClick={() => void saveChapter(chapter)}>Salvar capítulo</button></div>
                     </div>
                   </details>
-                )) : <div className="manage-empty"><span>☷</span><h2>Nenhum capítulo</h2><p>Adicione o primeiro capítulo para continuar a obra.</p></div>}
+                )) : <div className="manage-empty"><span><NovaIcon name="book" size={28} /></span><h2>Nenhum capítulo</h2><p>Adicione o primeiro capítulo para continuar a obra.</p></div>}
               </div>
             </div>
           ) : null}
@@ -366,12 +379,13 @@ export function WorkManager({ workId }: { workId: string }) {
           {tab === 'danger' ? (
             <div className="manage-section danger-section">
               <div className="manage-section-head"><div><p className="eyebrow">Zona de perigo</p><h1>Excluir obra</h1><p>Esta ação retira a obra do ArchiveNova e não pode ser desfeita pela interface.</p></div></div>
-              <div className="danger-zone-card"><span>⚠</span><div><h2>Excluir “{work.title}”</h2><p>A obra deixa de aparecer para leitores imediatamente. Digite o título exato abaixo para liberar o botão.</p><label>Digite <strong>{work.title}</strong><input value={deleteConfirmation} onChange={(event) => setDeleteConfirmation(event.target.value)} /></label><button className="danger-button large" disabled={busy || deleteConfirmation !== work.title} onClick={removeWork}>{busy ? 'Excluindo…' : 'Excluir obra'}</button></div></div>
+              <div className="danger-zone-card"><span><NovaIcon name="warning" size={28} /></span><div><h2>Excluir “{work.title}”</h2><p>A obra deixa de aparecer para leitores imediatamente. Digite o título exato abaixo para liberar o botão.</p><label>Digite <strong>{work.title}</strong><input value={deleteConfirmation} onChange={(event) => setDeleteConfirmation(event.target.value)} /></label><button className="danger-button large" disabled={busy || deleteConfirmation !== work.title} onClick={removeWork}>{busy ? 'Excluindo…' : 'Excluir obra'}</button></div></div>
             </div>
           ) : null}
 
           {error ? <div className="manage-alert error" role="alert">{error}</div> : null}
           {message ? <div className="manage-alert success" role="status">{message}</div> : null}
+          {confirmDialog}
         </section>
       </div>
     </main>

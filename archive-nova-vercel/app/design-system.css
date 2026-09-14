@@ -86,3 +86,172 @@ button:disabled,[aria-disabled="true"]{cursor:not-allowed}
 .topbar>.primary-button.nova-button-with-icon::after{content:none!important}
 .filter-trigger>span{display:grid;place-items:center}
 .view-tools .icon-button{display:grid;place-items:center}
+
+
+/* Sitewide UX normalization */
+.nova-inline-icon,
+.primary-button:has(svg),
+.secondary-button:has(svg),
+.ghost-button:has(svg),
+.reader-social-button:has(svg),
+.post-actions button,
+.post-composer-footer button,
+.support-methods a,
+.profile-self-actions a,
+.profile-self-actions button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+}
+
+.studio-empty>span:has(svg),
+.manage-empty>span:has(svg),
+.support-disabled>span:has(svg),
+.profile-not-found>span:has(svg),
+.studio-gate>span:has(svg){
+  display:grid;
+  place-items:center;
+  color:var(--accent);
+}
+
+.community-message,
+.profile-message,
+.manage-alert,
+.studio-alert{
+  border-radius:var(--an-radius-md);
+}
+
+.community-message[role="status"],
+.profile-message[role="status"],
+.manage-alert[role="status"],
+.reader-page-toast[role="status"]{
+  box-shadow:0 12px 34px rgba(0,0,0,.08);
+}
+
+/* Accessible destructive confirmation dialog */
+.nova-confirm-dialog{
+  width:min(520px,calc(100% - 28px));
+  border:1px solid var(--border);
+  border-radius:var(--an-radius-xl);
+  padding:0;
+  background:var(--surface);
+  color:var(--text);
+  box-shadow:0 32px 90px rgba(0,0,0,.34);
+  overflow:hidden;
+}
+.nova-confirm-dialog::backdrop{
+  background:rgba(13,9,11,.62);
+  backdrop-filter:blur(5px);
+}
+.nova-confirm-dialog[open]{
+  display:grid;
+  grid-template-columns:auto 1fr;
+  gap:14px;
+  padding:24px;
+  animation:an-dialog-in .2s cubic-bezier(.2,.75,.2,1);
+}
+.nova-confirm-icon{
+  width:44px;
+  height:44px;
+  border-radius:14px;
+  display:grid;
+  place-items:center;
+  color:var(--accent);
+  background:var(--accent-soft);
+}
+.nova-confirm-copy h2{
+  margin:1px 0 7px;
+  font:600 25px/1.1 Georgia,"Times New Roman",serif;
+  letter-spacing:-.025em;
+}
+.nova-confirm-copy p{
+  margin:0;
+  color:var(--muted);
+  line-height:1.6;
+  font-size:13px;
+}
+.nova-confirm-actions{
+  grid-column:1/-1;
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+  margin-top:8px;
+}
+.nova-danger-button{
+  background:var(--an-danger);
+}
+.nova-danger-button:hover{
+  background:color-mix(in srgb,var(--an-danger) 82%,#000);
+}
+@keyframes an-dialog-in{
+  from{opacity:0;transform:translateY(10px) scale(.985)}
+  to{opacity:1;transform:none}
+}
+
+/* Shared page rhythm */
+:where(
+  .studio-page,.profile-page,.public-reader-page,.notifications-page,.moderation-page,
+  .settings-page,.community-page,.discovery-page,.faq-page,.support-page,.advertise-page,
+  .collaboration-page,.manage-page,.publish-page
+){
+  text-rendering:optimizeLegibility;
+}
+
+:where(
+  .studio-panel,.community-post,.discovery-item,.faq-category,.pix-card,.support-methods,
+  .advertise-info-card,.contribution-list,.contribution-detail,.my-work-card,.profile-work-card
+){
+  border-color:var(--border);
+}
+
+:where(
+  .studio-panel,.community-post,.discovery-item,.faq-category,.pix-card,.support-methods,
+  .advertise-info-card,.contribution-detail,.my-work-card,.profile-work-card
+):focus-within{
+  border-color:color-mix(in srgb,var(--accent) 42%,var(--border));
+}
+
+/* Resilient text */
+:where(
+  .community-post,.profile-work-card,.my-work-card,.faq-answer,.contribution-detail,
+  .support-page,.advertise-page,.moderation-page,.notifications-page
+) :where(h1,h2,h3,p,a,button,span,strong,small){
+  overflow-wrap:anywhere;
+}
+
+:where(.post-actions,.reader-social-button,.nova-write-button,.support-methods a) svg{
+  flex:0 0 auto;
+}
+
+/* Motion tier 6/10: readable without animation, polished when available */
+@media(prefers-reduced-motion:no-preference){
+  :where(.community-post,.discovery-item,.studio-panel,.my-work-card,.profile-work-card){
+    transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease,background-color .22s ease;
+  }
+  :where(.community-post,.discovery-item,.studio-panel,.my-work-card,.profile-work-card):hover{
+    transform:translateY(-2px);
+  }
+  .nova-confirm-dialog::backdrop{
+    animation:an-backdrop-in .18s ease-out;
+  }
+  @keyframes an-backdrop-in{from{background:rgba(13,9,11,0)}}
+}
+
+@media(max-width:760px){
+  .nova-confirm-dialog[open]{
+    grid-template-columns:1fr;
+    padding:20px;
+  }
+  .nova-confirm-icon{width:40px;height:40px}
+  .nova-confirm-actions{
+    grid-column:1;
+    display:grid;
+    grid-template-columns:1fr;
+  }
+  .nova-confirm-actions button{width:100%;min-height:44px}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .nova-confirm-dialog[open]{animation:none}
+}
