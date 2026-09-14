@@ -1,0 +1,84 @@
+/* ArchiveNova Design System v1 — shared implementation layer */
+:root{
+  --an-bg:var(--bg);
+  --an-surface:var(--surface);
+  --an-surface-muted:var(--surface-2);
+  --an-fg:var(--text);
+  --an-fg-muted:var(--muted);
+  --an-primary:var(--accent);
+  --an-primary-hover:var(--accent-2);
+  --an-primary-soft:var(--accent-soft);
+  --an-border:var(--border);
+  --an-success:#2f8f5b;
+  --an-warning:#b57a1c;
+  --an-danger:#b6384e;
+  --an-radius-xs:8px;
+  --an-radius-sm:10px;
+  --an-radius-md:12px;
+  --an-radius-lg:16px;
+  --an-radius-xl:20px;
+  --an-radius-2xl:24px;
+  --an-space-1:4px;
+  --an-space-2:8px;
+  --an-space-3:12px;
+  --an-space-4:16px;
+  --an-space-5:20px;
+  --an-space-6:24px;
+  --an-space-8:32px;
+  --an-space-10:40px;
+  --an-space-12:48px;
+  --an-space-16:64px;
+  --an-focus:0 0 0 3px color-mix(in srgb,var(--accent) 24%,transparent);
+}
+
+:where(a,button,input,select,textarea,[tabindex]):focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:3px;
+  box-shadow:var(--an-focus);
+}
+
+:where(button,a,input,select,textarea){-webkit-tap-highlight-color:transparent}
+button:disabled,[aria-disabled="true"]{cursor:not-allowed}
+
+.nova-header svg,
+.nova-mobile-dock svg,
+.nav-item svg,
+.nova-button-with-icon svg,
+.landing-v4 svg{display:block;flex:0 0 auto}
+
+.nova-brand-spark{font-family:Georgia,"Times New Roman",serif}
+.nova-write-button{gap:7px}
+.nova-button-with-icon{display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.nova-menu-button{place-items:center}
+
+.nav-item>span{width:22px;display:grid;place-items:center}
+.theme-toggle>span:first-child{width:22px;display:grid;place-items:center}
+
+.landing-v4-feature-top>span svg,
+.landing-v4-float>span svg,
+.landing-v4-contribution-card>span svg{margin:auto}
+.landing-v4-trust b{display:grid;place-items:center}
+.landing-v4-post-card footer span{display:inline-flex;align-items:center;gap:5px}
+.landing-v4-contribution-card>b,.landing-v4-float>b{display:grid;place-items:center}
+
+.tags,.advertise-pills,.collab-badges,.landing-v4-format-list{overflow-wrap:anywhere}
+.tag{white-space:normal;word-break:break-word;text-overflow:clip}
+
+.primary-button,.secondary-button,.ghost-button,.nova-write-button,.landing-button{
+  min-height:40px;
+}
+@media (pointer:coarse){
+  .primary-button,.secondary-button,.ghost-button,.icon-button,.nova-write-button,.landing-button,
+  .nav-item,.nova-mobile-dock a{min-height:44px}
+}
+
+@media(max-width:760px){
+  .nova-header-nav.open a{min-height:44px;display:flex;align-items:center}
+}
+
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto!important}
+  .primary-button:hover,.nova-write-button:hover,.landing-button:hover,
+  .category-card:hover,.work-card:hover,.home-v4-shortcuts>a:hover,
+  .landing-v4-feature-card:hover{transform:none!important}
+}
