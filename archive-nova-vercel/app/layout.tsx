@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import './globals.css'
 import './community-v4.css'
+import './design-system.css'
 
 export const metadata: Metadata = {
   title: {
