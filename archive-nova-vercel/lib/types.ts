@@ -67,8 +67,9 @@ export interface Chapter {
   notes_before: string | null
   notes_after: string | null
   word_count: number
-  status: 'DRAFT' | 'PUBLISHED'
+  status: 'DRAFT' | 'SCHEDULED' | 'PUBLISHED'
   published_at: string | null
+  scheduled_for?: string | null
   created_at: string
   updated_at: string
 }
