@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
+import { NovaIcon } from '@/components/ui/nova-icon'
 
 type MiniProfile = { username: string; display_name: string | null; role?: string }
 
@@ -57,7 +58,10 @@ export function NovaHeader({ title }: { title?: string }) {
   return (
     <>
       <header className="nova-header">
-        <Link className="nova-header-brand" href="/"><span>✦</span><strong>Archive Nova</strong></Link>
+        <Link className="nova-header-brand" href="/" aria-label="Archive Nova — página inicial">
+          <span className="nova-brand-spark" aria-hidden="true">✦</span>
+          <strong>Archive Nova</strong>
+        </Link>
         {title ? <div className="nova-header-context">{title}</div> : null}
         <nav className={`nova-header-nav ${menuOpen ? 'open' : ''}`} aria-label="Navegação">
           <Link href="/explore" onClick={() => setMenuOpen(false)}>Explorar</Link>
@@ -72,19 +76,21 @@ export function NovaHeader({ title }: { title?: string }) {
         <div className="nova-header-actions">
           {user ? (
             <>
-              <Link className="nova-write-button" href="/write">＋ Escrever</Link>
-              <button className="nova-account-button" type="button" onClick={signOut} title="Sair da conta">{(profile?.display_name || profile?.username || user.email || 'U').slice(0, 1).toUpperCase()}</button>
+              <Link className="nova-write-button" href="/write"><NovaIcon name="write" size={17} />Escrever</Link>
+              <button className="nova-account-button" type="button" onClick={signOut} aria-label="Sair da conta" title="Sair da conta">{(profile?.display_name || profile?.username || user.email || 'U').slice(0, 1).toUpperCase()}</button>
             </>
           ) : <Link className="nova-write-button" href={`/explore?auth=login&return=${encodeURIComponent(returnPath)}`}>Entrar</Link>}
-          <button className="nova-menu-button" type="button" aria-label="Abrir menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>☰</button>
+          <button className="nova-menu-button" type="button" aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'} aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>
+            <NovaIcon name="menu" size={21} />
+          </button>
         </div>
       </header>
       <nav className="nova-mobile-dock" aria-label="Navegação móvel">
-        <Link className={pathname === '/feed' ? 'active' : ''} href="/feed"><span>✦</span><small>Feed</small></Link>
-        <Link className={pathname?.startsWith('/dashboard') ? 'active' : ''} href={user ? '/dashboard' : `/explore?auth=login&return=${encodeURIComponent('/dashboard')}`}><span>◫</span><small>Studio</small></Link>
-        <Link className="write" href="/write"><span>＋</span><small>Escrever</small></Link>
-        <Link className={pathname?.startsWith('/notifications') ? 'active' : ''} href={user ? '/notifications' : `/explore?auth=login&return=${encodeURIComponent('/notifications')}`}><span>♢{unread > 0 ? <i /> : null}</span><small>Alertas</small></Link>
-        <Link className={pathname?.startsWith('/users') ? 'active' : ''} href={user ? profileHref : `/explore?auth=login&return=${encodeURIComponent(returnPath)}`}><span>◎</span><small>Perfil</small></Link>
+        <Link className={pathname === '/feed' ? 'active' : ''} href="/feed"><span><NovaIcon name="feed" size={20} /></span><small>Feed</small></Link>
+        <Link className={pathname?.startsWith('/dashboard') ? 'active' : ''} href={user ? '/dashboard' : `/explore?auth=login&return=${encodeURIComponent('/dashboard')}`}><span><NovaIcon name="studio" size={20} /></span><small>Studio</small></Link>
+        <Link className="write" href="/write"><span><NovaIcon name="write" size={21} /></span><small>Escrever</small></Link>
+        <Link className={pathname?.startsWith('/notifications') ? 'active' : ''} href={user ? '/notifications' : `/explore?auth=login&return=${encodeURIComponent('/notifications')}`}><span><NovaIcon name="bell" size={20} />{unread > 0 ? <i /> : null}</span><small>Alertas</small></Link>
+        <Link className={pathname?.startsWith('/users') ? 'active' : ''} href={user ? profileHref : `/explore?auth=login&return=${encodeURIComponent(returnPath)}`}><span><NovaIcon name="user" size={20} /></span><small>Perfil</small></Link>
       </nav>
     </>
   )
