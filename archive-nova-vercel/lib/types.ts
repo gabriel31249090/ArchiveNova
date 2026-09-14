@@ -56,6 +56,7 @@ export interface WorkCardData {
   subscribed?: boolean
   total_count?: number
   allow_contributions?: boolean
+  series?: Array<{ id: string; title: string; position: number }>
 }
 
 export interface Chapter {
