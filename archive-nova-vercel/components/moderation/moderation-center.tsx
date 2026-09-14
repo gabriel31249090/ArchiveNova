@@ -81,7 +81,12 @@ export function ModerationCenter() {
 
   async function hideWork(report: ModerationReport) {
     if (!supabase || !report.work_id) return
-    if (!window.confirm('Ocultar esta obra do público? O autor ainda poderá vê-la e a equipe poderá restaurá-la depois.')) return
+    if (!(await confirmAction({
+      title: 'Ocultar obra do público?',
+      description: 'O autor ainda poderá vê-la e a equipe poderá restaurá-la depois.',
+      confirmLabel: 'Ocultar obra',
+      tone: 'danger',
+    }))) return
     setBusyId(report.id)
     const { error: actionError } = await supabase.rpc('moderate_work', { target_work: report.work_id, hide: true })
     setBusyId('')
@@ -90,8 +95,8 @@ export function ModerationCenter() {
   }
 
   if (loading) return <><NovaHeader title="Moderação" /><main className="moderation-page"><div className="studio-loading"><span /><h1>Abrindo fila de moderação…</h1></div></main></>
-  if (!user) return <><NovaHeader title="Moderação" /><main className="moderation-page"><div className="studio-gate"><span>⚑</span><h1>Área restrita.</h1><p>Entre com uma conta de moderador ou administrador.</p><Link className="primary-button" href="/explore?auth=login&return=/moderation">Entrar</Link></div></main></>
-  if (!['MODERATOR', 'ADMIN'].includes(role)) return <><NovaHeader title="Moderação" /><main className="moderation-page"><div className="profile-not-found"><span>⚑</span><h1>Você não tem acesso à moderação.</h1><p>Esta área é reservada à equipe do Archive Nova.</p><Link className="primary-button" href="/explore">Voltar ao arquivo</Link></div></main></>
+  if (!user) return <><NovaHeader title="Moderação" /><main className="moderation-page"><div className="studio-gate"><span><NovaIcon name="flag" size={30} /></span><h1>Área restrita.</h1><p>Entre com uma conta de moderador ou administrador.</p><Link className="primary-button" href="/explore?auth=login&return=/moderation">Entrar</Link></div></main></>
+  if (!['MODERATOR', 'ADMIN'].includes(role)) return <><NovaHeader title="Moderação" /><main className="moderation-page"><div className="profile-not-found"><span><NovaIcon name="flag" size={30} /></span><h1>Você não tem acesso à moderação.</h1><p>Esta área é reservada à equipe do Archive Nova.</p><Link className="primary-button" href="/explore">Voltar ao arquivo</Link></div></main></>
 
   return (
     <>
