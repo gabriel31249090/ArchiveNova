@@ -208,7 +208,36 @@ for all to authenticated
 using (public.is_admin())
 with check (public.is_admin());
 
-grant select on public.platform_admin_settings to anon, authenticated;
+revoke all on public.platform_admin_settings from anon, authenticated;
+
+create or replace function public.platform_public_settings()
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $
+  select coalesce(
+    (
+      select jsonb_build_object(
+        'announcement_enabled', s.announcement_enabled,
+        'announcement_text', s.announcement_text,
+        'allow_new_ad_requests', s.allow_new_ad_requests,
+        'updated_at', s.updated_at
+      )
+      from public.platform_admin_settings s
+      where s.id = 1
+    ),
+    jsonb_build_object(
+      'announcement_enabled', false,
+      'announcement_text', null,
+      'allow_new_ad_requests', true
+    )
+  );
+$;
+
+revoke execute on function public.platform_public_settings() from public;
+grant execute on function public.platform_public_settings() to anon, authenticated;
 
 -- -----------------------------------------------------------------------------
 -- 4. Global product areas: ADMIN-only writes
