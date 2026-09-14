@@ -707,7 +707,7 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
 
           <div className="sidebar-bottom">
             <button className="theme-toggle" onClick={toggleTheme} aria-label="Alternar tema">
-              <span>{theme === 'dark' ? '☀' : '☾'}</span><span>{theme === 'dark' ? 'Tema claro' : 'Tema escuro'}</span>
+              <span>{theme === 'dark' ? <NovaIcon name="sun" size={18} /> : <NovaIcon name="moon" size={18} />}</span><span>{theme === 'dark' ? 'Tema claro' : 'Tema escuro'}</span>
             </button>
             <button className="profile-mini profile-button" onClick={() => { if (profile) { window.location.href = `/users/${encodeURIComponent(profile.username)}`; return } setAuthError(''); authDialog.current?.showModal() }}>
               <div className="avatar">{profile?.username?.slice(0, 1).toUpperCase() || '?'}</div>
@@ -865,7 +865,7 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
             <div className="explore-toolbar-v4">
               <div className="explore-toolbar-left">
                 <button className={`filter-trigger ${filtersOpen ? 'active' : ''}`} onClick={() => setFiltersOpen((value) => !value)}>
-                  <span>☷</span> Filtros {activeFilterCount > 0 && <b>{activeFilterCount}</b>}
+                  <span><NovaIcon name="filter" size={17} /></span> Filtros {activeFilterCount > 0 && <b>{activeFilterCount}</b>}
                 </button>
                 <div className="sort-control">
                   <span>Ordenar</span>
@@ -877,8 +877,8 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
                 </div>
               </div>
               <div className="view-tools explore-view-tools">
-                <button className={`icon-button ${layout === 'grid' ? 'active' : ''}`} onClick={() => setLayout('grid')} aria-label="Visualização em grade">▦</button>
-                <button className={`icon-button ${layout === 'list' ? 'active' : ''}`} onClick={() => setLayout('list')} aria-label="Visualização em lista">☷</button>
+                <button className={`icon-button ${layout === 'grid' ? 'active' : ''}`} onClick={() => setLayout('grid')} aria-label="Visualização em grade"><NovaIcon name="grid" size={18} /></button>
+                <button className={`icon-button ${layout === 'list' ? 'active' : ''}`} onClick={() => setLayout('list')} aria-label="Visualização em lista"><NovaIcon name="list" size={18} /></button>
               </div>
             </div>
 
