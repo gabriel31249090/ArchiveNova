@@ -54,6 +54,128 @@ create policy audit_admin_read on public.audit_log
 for select to authenticated
 using (public.is_admin());
 
+-- Active-account enforcement. Suspended/deleted accounts may authenticate at
+-- Supabase Auth level, but they cannot mutate ArchiveNova application data.
+create or replace function public.enforce_active_account_write()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, auth, pg_temp
+as $
+begin
+  if auth.uid() is not null and not exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and p.status = 'ACTIVE'
+  ) then
+    raise exception 'ACCOUNT_NOT_ACTIVE' using errcode = '42501';
+  end if;
+
+  if tg_op = 'DELETE' then return old; end if;
+  return new;
+end;
+$;
+
+do $
+declare
+  table_name text;
+begin
+  foreach table_name in array array[
+    'works','chapters','comments','kudos','bookmarks','reading_history',
+    'work_subscriptions','series','series_works','series_subscriptions',
+    'user_subscriptions','collections','collection_works','reports',
+    'community_posts','post_poll_votes','post_likes','post_comments',
+    'work_collaborators','work_contributions','contribution_reviews',
+    'creator_support_profiles','ad_requests','library_entries','shelves',
+    'shelf_items','drafts','draft_chapters','draft_collaborators',
+    'draft_inline_comments'
+  ]
+  loop
+    execute format('drop trigger if exists %I on public.%I', table_name || '_active_account_guard', table_name);
+    execute format(
+      'create trigger %I before insert or update or delete on public.%I for each row execute function public.enforce_active_account_write()',
+      table_name || '_active_account_guard',
+      table_name
+    );
+  end loop;
+end;
+$;
+
+-- Public content from suspended/deleted creators disappears for normal readers,
+-- while the owner and staff can still inspect it.
+create or replace function public.can_read_work(target_work uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, auth, pg_temp
+as $
+  select exists (
+    select 1
+    from public.works w
+    join public.profiles creator on creator.id = w.creator_id
+    where w.id = target_work
+      and w.deleted_at is null
+      and (
+        w.creator_id = auth.uid()
+        or public.is_staff()
+        or (
+          creator.status = 'ACTIVE'
+          and (
+            (w.status <> 'DRAFT' and w.visibility in ('PUBLIC', 'UNLISTED'))
+            or (w.status <> 'DRAFT' and w.visibility = 'REGISTERED' and auth.uid() is not null)
+          )
+        )
+      )
+  );
+$;
+
+create or replace function public.can_read_post(target_post uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, auth, pg_temp
+as $
+  select exists (
+    select 1
+    from public.community_posts cp
+    join public.profiles author_profile on author_profile.id = cp.author_id
+    where cp.id = target_post
+      and cp.deleted_at is null
+      and (
+        cp.author_id = auth.uid()
+        or public.is_staff()
+        or (
+          author_profile.status = 'ACTIVE'
+          and (
+            cp.visibility = 'PUBLIC'
+            or (
+              cp.visibility = 'FOLLOWERS'
+              and auth.uid() is not null
+              and exists (
+                select 1 from public.user_subscriptions us
+                where us.subscriber_id = auth.uid() and us.author_id = cp.author_id
+              )
+            )
+          )
+        )
+      )
+      and (
+        auth.uid() is null
+        or cp.author_id = auth.uid()
+        or public.is_staff()
+        or not exists (
+          select 1 from public.user_blocks b
+          where (b.blocker_id = auth.uid() and b.blocked_id = cp.author_id)
+             or (b.blocker_id = cp.author_id and b.blocked_id = auth.uid())
+        )
+      )
+  );
+$;
+
+grant execute on function public.can_read_work(uuid) to anon, authenticated;
+grant execute on function public.can_read_post(uuid) to anon, authenticated;
+
 -- -----------------------------------------------------------------------------
 -- 3. Global platform settings
 -- -----------------------------------------------------------------------------
