@@ -80,9 +80,9 @@ declare
   table_name text;
 begin
   foreach table_name in array array[
-    'works','chapters','comments','kudos','bookmarks','reading_history',
+    'profiles','user_preferences','pseuds','works','chapters','comments','kudos','bookmarks','reading_history',
     'work_subscriptions','series','series_works','series_subscriptions',
-    'user_subscriptions','collections','collection_works','reports',
+    'user_subscriptions','collections','collection_works','notifications','user_blocks','reports',
     'community_posts','post_poll_votes','post_likes','post_comments',
     'work_collaborators','work_contributions','contribution_reviews',
     'creator_support_profiles','ad_requests','library_entries','shelves',
@@ -406,6 +406,9 @@ begin
   if normalized not in ('USER','MODERATOR','ADMIN') then
     raise exception 'INVALID_ROLE';
   end if;
+  if target_user = auth.uid() and normalized <> 'ADMIN' then
+    raise exception 'CANNOT_DEMOTE_SELF' using errcode = '42501';
+  end if;
 
   select p.role,
          exists(
@@ -461,6 +464,9 @@ begin
   end if;
   if normalized not in ('ACTIVE','SUSPENDED','DELETED') then
     raise exception 'INVALID_STATUS';
+  end if;
+  if target_user = auth.uid() and normalized <> 'ACTIVE' then
+    raise exception 'CANNOT_SUSPEND_SELF' using errcode = '42501';
   end if;
 
   select p.status,
