@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useEditor } from '@tiptap/react'
 import { FONT_OPTIONS, FONT_SIZE_OPTIONS, LINE_HEIGHT_OPTIONS } from '@/components/editor/editor-extensions'
 
-type TiptapEditor = NonNullable<ReturnType<typeof useEditor>>
+export type TiptapEditor = NonNullable<ReturnType<typeof useEditor>>
 
 export type ImportMode = 'replace' | 'append'
 
@@ -56,7 +56,7 @@ function applyIndent(editor: TiptapEditor, value: string | null) {
   }
 }
 
-function setLink(editor: TiptapEditor) {
+export function setLink(editor: TiptapEditor) {
   const current = String(editor.getAttributes('link').href || '')
   const href = window.prompt('Cole o endereço do link:', current || 'https://')
   if (href === null) return
