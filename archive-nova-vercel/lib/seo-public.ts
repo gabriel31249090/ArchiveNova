@@ -154,3 +154,69 @@ export async function getPublicListSitemapEntries() {
     return out
   } catch { return [] }
 }
+
+
+export type PublicTaxonomySeo = {
+  id: string
+  name: string
+  slug: string
+  description: string
+  kind: string
+  workCount: number
+}
+
+export async function getPublicTaxonomySeo(slug: string, kind: string): Promise<PublicTaxonomySeo | null> {
+  try {
+    const supabase = seoClient()
+    if (!supabase) return null
+    const { data, error } = await supabase.rpc('get_taxonomy_page', {
+      target_slug: decodeURIComponent(slug),
+      target_kind: kind,
+    })
+    if (error || !data) return null
+    const payload = data as { taxonomy?: Record<string, unknown>; works?: Array<Record<string, unknown>> }
+    const item = payload.taxonomy || {}
+    if (!item.id) return null
+    return {
+      id: String(item.id),
+      name: String(item.name || 'Índice'),
+      slug: String(item.slug || slug),
+      description: String(item.description || ''),
+      kind: String(item.kind || kind),
+      workCount: Array.isArray(payload.works) ? payload.works.length : 0,
+    }
+  } catch { return null }
+}
+
+export type PublicListSeo = {
+  id: string
+  title: string
+  description: string
+  ownerUsername: string
+  ownerName: string
+  kind: 'series' | 'collections' | 'shelves'
+  workCount: number
+}
+
+export async function getPublicListSeo(id: string, kind: PublicListSeo['kind']): Promise<PublicListSeo | null> {
+  try {
+    const supabase = seoClient()
+    if (!supabase) return null
+    const rpc = kind === 'series' ? 'get_series' : kind === 'collections' ? 'get_collection' : 'get_shelf'
+    const args = kind === 'series' ? { target_series: id } : kind === 'collections' ? { target_collection: id } : { target_shelf: id }
+    const { data, error } = await supabase.rpc(rpc, args)
+    if (error || !data) return null
+    const payload = data as { series?: Record<string, unknown>; collection?: Record<string, unknown>; shelf?: Record<string, unknown>; works?: Array<Record<string, unknown>> }
+    const item = payload.series || payload.collection || payload.shelf || {}
+    if (!item.id) return null
+    return {
+      id: String(item.id),
+      title: String(item.title || item.name || 'Lista'),
+      description: String(item.summary || item.description || ''),
+      ownerUsername: String(item.owner_username || ''),
+      ownerName: String(item.owner_display_name || item.owner_username || ''),
+      kind,
+      workCount: Array.isArray(payload.works) ? payload.works.length : 0,
+    }
+  } catch { return null }
+}
