@@ -143,7 +143,7 @@ export function CreatorDashboard() {
       <main className="studio-page">
         <section className="studio-hero">
           <div><p className="eyebrow">Creator Studio</p><h1>Olá, {displayName || username}.</h1><p>Seu arquivo criativo, suas métricas e tudo que precisa de atenção em um só lugar.</p></div>
-          <div className="studio-hero-actions"><Link className="secondary-button" href={`/users/${encodeURIComponent(username)}`}>Ver perfil público</Link><Link className="primary-button large" href="/write"><NovaIcon name="write" size={17} /> Nova história</Link></div>
+          <div className="studio-hero-actions"><Link className="secondary-button" href="/dashboard/analytics">Analytics</Link><Link className="secondary-button" href="/dashboard/library">Organização</Link><Link className="secondary-button" href="/collaboration">Colaboração</Link><Link className="secondary-button" href={`/users/${encodeURIComponent(username)}`}>Ver perfil público</Link><Link className="primary-button large" href="/write"><NovaIcon name="write" size={17} /> Nova história</Link></div>
         </section>
 
         {error ? <div className="studio-alert error">{error}</div> : null}
