@@ -6,6 +6,8 @@ import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { NovaHeader } from '@/components/shared/nova-header'
 import { ContributionHeatmap } from '@/components/profile/contribution-heatmap'
+import { NovaIcon } from '@/components/ui/nova-icon'
+import { useNovaConfirm } from '@/components/ui/nova-confirm'
 import type { SupportProfile, WorkCardData } from '@/lib/types'
 
 function normalizeWork(row: Record<string, unknown>): WorkCardData {
@@ -30,6 +32,7 @@ type CalendarDay = { date: string; count: number }
 export function PublicProfilePage({ username }: { username: string }) {
   const configured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
   const supabase = useMemo(() => configured ? createClient() : null, [configured])
+  const { ask: confirmAction, dialog: confirmDialog } = useNovaConfirm()
   const [user, setUser] = useState<User | null>(null)
   const [payload, setPayload] = useState<ProfilePayload | null>(null)
   const [works, setWorks] = useState<WorkCardData[]>([])
@@ -87,7 +90,12 @@ export function PublicProfilePage({ username }: { username: string }) {
   async function toggleBlock() {
     if (!payload || !supabase || !requireLogin()) return
     const willBlock = !payload.viewer.blocked
-    if (willBlock && !window.confirm(`Bloquear @${payload.profile.username}? As obras deste autor deixarão de aparecer para você.`)) return
+    if (willBlock && !(await confirmAction({
+      title: `Bloquear @${payload.profile.username}?`,
+      description: 'As obras deste autor deixarão de aparecer para você e o acompanhamento será removido.',
+      confirmLabel: 'Bloquear autor',
+      tone: 'danger',
+    }))) return
     setBusy(true)
     const { data, error: blockError } = await supabase.rpc('toggle_user_block', { target_user: payload.profile.id })
     setBusy(false)
@@ -116,7 +124,7 @@ export function PublicProfilePage({ username }: { username: string }) {
           <div className="profile-avatar-large">{(profile.display_name || profile.username).slice(0, 1).toUpperCase()}<i>✦</i></div>
           <div className="profile-identity"><p className="eyebrow">Perfil público</p><h1>{profile.display_name || profile.username}</h1><span>@{profile.username}</span><p className="profile-bio">{profile.bio || 'Este autor ainda não escreveu uma bio.'}</p><small>No Archive Nova desde {joined}.</small></div>
           <div className="profile-actions">
-            {viewer.is_self ? <div className="profile-self-actions"><Link className="primary-button large" href="/dashboard">Abrir Creator Studio</Link><Link className="secondary-button large" href="/settings/profile">Editar perfil</Link><Link className="secondary-button large" href="/settings/support">Configurar apoio</Link></div> : <div className="profile-self-actions"><button className={`primary-button large ${viewer.following ? 'following' : ''}`} disabled={busy || viewer.blocked} onClick={toggleFollow}>{viewer.following ? '✓ Seguindo' : '＋ Seguir autor'}</button>{support?.enabled ? <Link className="secondary-button large support-profile-button" href={`/support/${encodeURIComponent(profile.username)}`}>♡ Apoiar</Link> : null}</div>}
+            {viewer.is_self ? <div className="profile-self-actions"><Link className="primary-button large" href="/dashboard">Abrir Creator Studio</Link><Link className="secondary-button large" href="/settings/profile">Editar perfil</Link><Link className="secondary-button large" href="/settings/support">Configurar apoio</Link></div> : <div className="profile-self-actions"><button className={`primary-button large ${viewer.following ? 'following' : ''}`} disabled={busy || viewer.blocked} onClick={toggleFollow}>{viewer.following ? <><NovaIcon name="check" size={16} /> Seguindo</> : <><NovaIcon name="plus" size={16} /> Seguir autor</>}</button>{support?.enabled ? <Link className="secondary-button large support-profile-button" href={`/support/${encodeURIComponent(profile.username)}`}><NovaIcon name="heart" size={16} /> Apoiar</Link> : null}</div>}
             {!viewer.is_self && user ? <button className="profile-more-button" type="button" onClick={toggleBlock} disabled={busy}>{viewer.blocked ? 'Desbloquear' : 'Bloquear'}</button> : null}
           </div>
         </section>
@@ -137,8 +145,9 @@ export function PublicProfilePage({ username }: { username: string }) {
 
         <section className="profile-library">
           <header><div><p className="eyebrow">Arquivo de @{profile.username}</p><h2>Histórias publicadas</h2></div><span>{works.length} obra{works.length === 1 ? '' : 's'}</span></header>
-          {works.length ? <div className="profile-work-grid">{works.map((work) => <article className="profile-work-card" key={work.id}><div className="profile-work-card-top"><span className="rating-badge">{work.rating === 'GENERAL' ? 'G' : work.rating === 'TEEN' ? 'T' : work.rating === 'MATURE' ? 'M' : work.rating === 'EXPLICIT' ? 'E' : '?'}</span><span>{work.status === 'COMPLETE' ? 'Concluída' : work.status === 'HIATUS' ? 'Hiato' : 'Em andamento'}</span></div><div><Link href={`/works/${work.id}`}><h3>{work.title}</h3></Link><p>{work.summary || 'Sem resumo.'}</p></div><div className="profile-work-tags">{work.fandoms.slice(0,2).map((tag) => <span key={tag}>{tag}</span>)}{work.tags.slice(0,2).map((tag) => <span key={tag}>{tag}</span>)}</div><footer><span>{formatNumber(work.word_count)} palavras</span><span>♥ {formatNumber(work.kudos_count)}</span><span>◌ {formatNumber(work.hits_count)}</span>{work.allow_contributions ? <Link href={`/works/${work.id}/contribute`}>⑂ Contribuir</Link> : null}</footer></article>)}</div> : <div className="studio-empty large"><span>✎</span><h2>Nenhuma obra pública ainda</h2><p>Quando @{profile.username} publicar uma história, ela aparecerá aqui.</p></div>}
+          {works.length ? <div className="profile-work-grid">{works.map((work) => <article className="profile-work-card" key={work.id}><div className="profile-work-card-top"><span className="rating-badge">{work.rating === 'GENERAL' ? 'G' : work.rating === 'TEEN' ? 'T' : work.rating === 'MATURE' ? 'M' : work.rating === 'EXPLICIT' ? 'E' : '?'}</span><span>{work.status === 'COMPLETE' ? 'Concluída' : work.status === 'HIATUS' ? 'Hiato' : 'Em andamento'}</span></div><div><Link href={`/works/${work.id}`}><h3>{work.title}</h3></Link><p>{work.summary || 'Sem resumo.'}</p></div><div className="profile-work-tags">{work.fandoms.slice(0,2).map((tag) => <span key={tag}>{tag}</span>)}{work.tags.slice(0,2).map((tag) => <span key={tag}>{tag}</span>)}</div><footer><span>{formatNumber(work.word_count)} palavras</span><span>♥ {formatNumber(work.kudos_count)}</span><span>◌ {formatNumber(work.hits_count)}</span>{work.allow_contributions ? <Link href={`/works/${work.id}/contribute`}><NovaIcon name="branch" size={15} /> Contribuir</Link> : null}</footer></article>)}</div> : <div className="studio-empty large"><span>✎</span><h2>Nenhuma obra pública ainda</h2><p>Quando @{profile.username} publicar uma história, ela aparecerá aqui.</p></div>}
         </section>
+        {confirmDialog}
       </main>
     </>
   )
