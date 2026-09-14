@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from 'react'
 import { EditorContent, useEditor } from '@tiptap/react'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { useNovaConfirm } from '@/components/ui/nova-confirm'
 import { type CloudDraft, type CloudDraftChapter, readCloudMirror, writeCloudMirror, clearCloudMirror } from '@/lib/cloud-drafts'
@@ -39,6 +40,7 @@ export function CloudStoryEditor({ draftId }: { draftId: string }) {
   const savingRef = useRef(false)
   const queuedSaveRef = useRef(false)
   const saveFunctionRef = useRef<() => Promise<void>>(async () => undefined)
+  const liveChannelRef = useRef<RealtimeChannel | null>(null)
 
   const [title, setTitle] = useState('')
   const [chapterTitle, setChapterTitle] = useState('')
@@ -66,6 +68,8 @@ export function CloudStoryEditor({ draftId }: { draftId: string }) {
   const [chapterRevision, setChapterRevision] = useState(1)
   const [pendingSync, setPendingSync] = useState(false)
   const [online, setOnline] = useState(true)
+  const [liveEditors, setLiveEditors] = useState(1)
+  const [remoteUpdate, setRemoteUpdate] = useState(false)
   const [conflict, setConflict] = useState<null | {
     draftRevision: number
     chapterRevision: number
@@ -165,6 +169,43 @@ export function CloudStoryEditor({ draftId }: { draftId: string }) {
     return () => { window.removeEventListener('online', update); window.removeEventListener('offline', update) }
   }, [])
 
+  useEffect(() => {
+    if (!supabase || !hydratedDraft) return
+    let active = true
+    let ownUserId = ''
+    const channel = supabase.channel('writer-live-' + draftId, { config: { presence: { key: 'anonymous' } } })
+    liveChannelRef.current = channel
+
+    void (async () => {
+      const current = (await supabase.auth.getUser()).data.user
+      if (!current || !active) return
+      ownUserId = current.id
+      await channel
+        .on('presence', { event: 'sync' }, () => {
+          const state = channel.presenceState()
+          const count = Object.values(state).reduce((sum, presences) => sum + presences.length, 0)
+          setLiveEditors(Math.max(1, count))
+        })
+        .on('broadcast', { event: 'draft-saved' }, ({ payload }) => {
+          const event = (payload || {}) as { user_id?: string; chapter_id?: string }
+          if (event.user_id === ownUserId) return
+          setRemoteUpdate(true)
+          setNotice('Um colaborador salvou uma nova versão deste rascunho.')
+        })
+        .subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            await channel.track({ user_id: current.id, joined_at: new Date().toISOString() })
+          }
+        })
+    })()
+
+    return () => {
+      active = false
+      if (liveChannelRef.current === channel) liveChannelRef.current = null
+      void supabase.removeChannel(channel)
+    }
+  }, [draftId, hydratedDraft, supabase])
+
   const persistMirror = useCallback((pending: boolean) => {
     if (!hydratedDraft || !activeChapterId) return
     writeCloudMirror({ version: 1, draftId, chapterId: activeChapterId, title, chapterTitle, content: contentHtml, updatedAt: new Date().toISOString(), pendingSync: pending })
@@ -212,6 +253,12 @@ export function CloudStoryEditor({ draftId }: { draftId: string }) {
       setSaveState('saved')
       persistMirror(false)
       setChapters((current) => current.map((chapter) => chapter.id === activeChapterId ? { ...chapter, title: chapterTitle, content_html: contentHtml, word_count: wordCount, revision: nextChapterRevision, updated_at: savedAt.toISOString() } : chapter))
+      setRemoteUpdate(false)
+      void liveChannelRef.current?.send({
+        type: 'broadcast',
+        event: 'draft-saved',
+        payload: { chapter_id: activeChapterId, saved_at: savedAt.toISOString() },
+      })
     } catch (error) {
       console.error('Falha ao sincronizar rascunho:', error)
       setSaveState(navigator.onLine ? 'error' : 'idle')
@@ -396,6 +443,7 @@ export function CloudStoryEditor({ draftId }: { draftId: string }) {
       </header>
 
       {conflict ? <div className="writer-conflict-banner"><div><strong>Este rascunho foi alterado em outro dispositivo.</strong><span>Escolha qual versão deve continuar antes de salvar novamente.</span></div><button type="button" onClick={useRemoteConflict}>Usar nuvem</button><button className="primary" type="button" onClick={() => void keepLocalConflict()}>Manter esta versão</button></div> : null}
+      {remoteUpdate && !conflict ? <div className="writer-collab-banner"><div><strong>Nova versão de um colaborador.</strong><span>Há uma atualização na nuvem. Recarregue antes de continuar se não tiver alterações locais pendentes.</span></div><button type="button" onClick={() => { if (pendingSync) { setNotice('Salve ou resolva suas alterações locais antes de recarregar.'); return } setRemoteUpdate(false); void loadCloudDraft(activeChapterId) }}>Recarregar versão</button></div> : null}
       {!online ? <div className="writer-offline-banner">Você está sem conexão. Continue escrevendo: as alterações estão salvas neste dispositivo e serão sincronizadas automaticamente.</div> : null}
 
       {writerMode !== 'read' ? <div className="writer-toolbar-wrap writer-toolbar-wrap-v5"><EditorToolbar editor={editor} onOpenFind={() => setFindOpen(true)} /></div> : null}
@@ -403,7 +451,7 @@ export function CloudStoryEditor({ draftId }: { draftId: string }) {
 
       <div className="writer-workspace writer-workspace-v5">
         <aside className="writer-side-rail writer-side-rail-v5" aria-label="Informações do documento">
-          <div className="writer-rail-card"><span className="writer-rail-label">RASCUNHO NA NUVEM</span><strong>{title.trim() || 'Sem título'}</strong><p>{chapters.length} {chapters.length === 1 ? 'capítulo' : 'capítulos'} · sincronizado com sua conta.</p></div>
+          <div className="writer-rail-card"><span className="writer-rail-label">RASCUNHO NA NUVEM</span><strong>{title.trim() || 'Sem título'}</strong><p>{chapters.length} {chapters.length === 1 ? 'capítulo' : 'capítulos'} · sincronizado com sua conta.</p><small className="writer-live-presence"><i /> {liveEditors} {liveEditors === 1 ? 'editor online' : 'editores online'}</small></div>
           <div className="writer-cloud-chapters"><div className="writer-cloud-chapters-head"><span>CAPÍTULOS</span><button type="button" onClick={() => void addChapter()}>＋</button></div>{chapters.map((chapter) => <button key={chapter.id} type="button" className={chapter.id === activeChapterId ? 'active' : ''} onClick={() => void switchChapter(chapter.id)}><b>{String(chapter.position).padStart(2,'0')}</b><span>{chapter.title || `Capítulo ${chapter.position}`}</span><small>{chapter.word_count.toLocaleString('pt-BR')} p.</small></button>)}<button className="writer-delete-chapter" type="button" disabled={chapters.length <= 1} onClick={() => void deleteChapter()}>Excluir capítulo atual</button></div>
           <div className="writer-rail-stats"><div><strong>{wordCount.toLocaleString('pt-BR')}</strong><span>palavras</span></div><div><strong>{characterCount.toLocaleString('pt-BR')}</strong><span>caracteres</span></div><div><strong>~{readingMinutes} min</strong><span>de leitura</span></div></div>
           <div className="writer-rail-note"><span>Sincronização</span><p>O Writer mantém uma cópia local de segurança. Se a internet cair, você pode continuar normalmente.</p></div>

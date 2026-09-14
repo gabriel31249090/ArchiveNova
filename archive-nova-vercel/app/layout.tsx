@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import { JsonLd } from '@/components/seo/json-ld'
 import { absoluteUrl, getSiteUrl } from '@/lib/site'
+import { PwaRegistrar } from '@/components/pwa/pwa-registrar'
 import './globals.css'
 import './community-v4.css'
 import './design-system.css'
@@ -12,6 +13,7 @@ const googleVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.tri
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   applicationName: 'Archive Nova',
+  appleWebApp: { capable: true, title: 'Archive Nova', statusBarStyle: 'black-translucent' },
   title: {
     default: 'Archive Nova — Histórias sem algoritmo',
     template: '%s | Archive Nova',
@@ -66,6 +68,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     <html lang="pt-BR" suppressHydrationWarning>
       <body>
         <JsonLd value={websiteJsonLd} />
+        <PwaRegistrar />
         {children}
       </body>
     </html>

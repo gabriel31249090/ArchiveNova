@@ -53,6 +53,7 @@ function normalizeChapter(row: Record<string, unknown>): Chapter {
     word_count: Number(row.word_count || 0),
     status: String(row.status || 'PUBLISHED') as Chapter['status'],
     published_at: row.published_at == null ? null : String(row.published_at),
+    scheduled_for: row.scheduled_for == null ? null : String(row.scheduled_for),
     created_at: String(row.created_at || ''),
     updated_at: String(row.updated_at || ''),
   }
@@ -314,7 +315,7 @@ export function WorkManager({ workId }: { workId: string }) {
       <header className="manage-topbar">
         <Link className="publish-brand" href="/"><span>✦</span><strong>Archive Nova</strong></Link>
         <div className="manage-breadcrumb"><Link href="/dashboard">Creator Studio</Link><b>/</b><strong>{work.title}</strong></div>
-        <div className="manage-top-actions"><Link href={`/works/${work.id}`}>Ver obra</Link><Link className="nova-inline-icon" href={`/works/${work.id}/contribute`}><NovaIcon name="branch" size={16} />Colaboração</Link><Link className="primary-button nova-button-with-icon" href="/write"><NovaIcon name="write" size={16} />Escrever</Link></div>
+        <div className="manage-top-actions"><Link href={`/works/${work.id}`}>Ver obra</Link><Link href={`/works/${work.id}/versions`}>Versões</Link><Link href={`/works/${work.id}/schedule`}>Agendar</Link><Link href={`/works/${work.id}/export`}>Exportar</Link><Link className="nova-inline-icon" href={`/works/${work.id}/contribute`}><NovaIcon name="branch" size={16} />Colaboração</Link><Link className="primary-button nova-button-with-icon" href="/write"><NovaIcon name="write" size={16} />Escrever</Link></div>
       </header>
 
       <div className="manage-shell">
@@ -357,13 +358,13 @@ export function WorkManager({ workId }: { workId: string }) {
                 {chapters.length ? chapters.map((chapter, index) => (
                   <details className="chapter-manager-card" key={chapter.id} open={index === 0}>
                     <summary>
-                      <div className="chapter-order"><strong>{String(chapter.chapter_number).padStart(2, '0')}</strong><div><b>{chapterLabel(chapter)}</b><small>{chapter.word_count.toLocaleString('pt-BR')} palavras · {chapter.status === 'PUBLISHED' ? 'Publicado' : 'Rascunho'}</small></div></div>
+                      <div className="chapter-order"><strong>{String(chapter.chapter_number).padStart(2, '0')}</strong><div><b>{chapterLabel(chapter)}</b><small>{chapter.word_count.toLocaleString('pt-BR')} palavras · {chapter.status === 'PUBLISHED' ? 'Publicado' : chapter.status === 'SCHEDULED' ? 'Agendado' : 'Rascunho'}</small></div></div>
                       <div className="chapter-order-actions" onClick={(event) => event.preventDefault()}><button type="button" disabled={index === 0 || busy} onClick={() => void moveChapter(index, -1)}>↑</button><button type="button" disabled={index === chapters.length - 1 || busy} onClick={() => void moveChapter(index, 1)}>↓</button></div>
                     </summary>
                     <div className="chapter-manager-body">
                       <div className="manage-form-grid compact">
                         <label className="span-2">Título<input value={chapter.title || ''} onChange={(event) => updateChapterLocal(chapter.id, { title: event.target.value })} maxLength={300} placeholder={`Capítulo ${chapter.chapter_number}`} /></label>
-                        <label>Status<select value={chapter.status} onChange={(event) => updateChapterLocal(chapter.id, { status: event.target.value as Chapter['status'] })}><option value="PUBLISHED">Publicado</option><option value="DRAFT">Rascunho</option></select></label>
+                        <label>Status<select value={chapter.status} onChange={(event) => updateChapterLocal(chapter.id, { status: event.target.value as Chapter['status'] })}><option value="PUBLISHED">Publicado</option><option value="SCHEDULED" disabled>Agendado</option><option value="DRAFT">Rascunho</option></select></label>
                         <label>Nota antes do capítulo<textarea value={chapter.notes_before || ''} onChange={(event) => updateChapterLocal(chapter.id, { notes_before: event.target.value })} rows={3} /></label>
                         <label>Nota depois do capítulo<textarea value={chapter.notes_after || ''} onChange={(event) => updateChapterLocal(chapter.id, { notes_after: event.target.value })} rows={3} /></label>
                       </div>
