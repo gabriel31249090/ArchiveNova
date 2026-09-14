@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import type { WorkCardData } from '@/lib/types'
+import { NovaIcon } from '@/components/ui/nova-icon'
 
 function normalizeWork(row: Record<string, unknown>): WorkCardData {
   return {
@@ -46,7 +47,7 @@ export function MyWorksDashboard() {
 
   return (
     <main className="manage-page">
-      <header className="manage-topbar"><Link className="publish-brand" href="/"><span>✦</span><strong>Archive Nova</strong></Link><div className="manage-breadcrumb"><Link href="/dashboard">Creator Studio</Link><b>/</b><strong>Minhas obras</strong></div><div className="manage-top-actions"><Link href="/explore">Explorar</Link><Link className="primary-button" href="/write">＋ Nova obra</Link></div></header>
+      <header className="manage-topbar"><Link className="publish-brand" href="/"><span>✦</span><strong>Archive Nova</strong></Link><div className="manage-breadcrumb"><Link href="/dashboard">Creator Studio</Link><b>/</b><strong>Minhas obras</strong></div><div className="manage-top-actions"><Link href="/explore">Explorar</Link><Link className="primary-button" href="/write"><NovaIcon name="write" size={16} /> Nova obra</Link></div></header>
       <div className="my-works-shell">
         <div className="my-works-head"><div><p className="eyebrow">Painel do autor</p><h1>Minhas obras</h1><p>Edite informações, capítulos e configurações das histórias que você publicou.</p></div><Link className="primary-button large" href="/write">Começar uma história</Link></div>
         {works.length ? <div className="my-works-grid">{works.map((work) => (
@@ -55,9 +56,9 @@ export function MyWorksDashboard() {
             <div><h2>{work.title}</h2><p>{work.summary || 'Sem resumo.'}</p></div>
             <div className="publish-review-tags">{work.fandoms.slice(0, 2).map((fandom) => <span className="primary" key={fandom}>{fandom}</span>)}{work.tags.slice(0, 3).map((tag) => <span key={tag}>{tag}</span>)}</div>
             <div className="my-work-stats"><span><strong>{work.chapter_count}</strong> capítulos</span><span><strong>{work.word_count.toLocaleString('pt-BR')}</strong> palavras</span><span><strong>{work.hits_count.toLocaleString('pt-BR')}</strong> leituras</span><span><strong>{work.kudos_count.toLocaleString('pt-BR')}</strong> kudos</span></div>
-            <div className="my-work-actions"><Link className="ghost-button" href={`/explore?work=${work.id}`}>Visualizar</Link><Link className="primary-button" href={`/works/${work.id}/manage`}>Gerenciar →</Link></div>
+            <div className="my-work-actions"><Link className="ghost-button" href={`/explore?work=${work.id}`}>Visualizar</Link><Link className="primary-button" href={`/works/${work.id}/manage`}>Gerenciar <NovaIcon name="arrowRight" size={15} /></Link></div>
           </article>
-        ))}</div> : <div className="manage-empty"><span>✎</span><h2>Você ainda não publicou nenhuma obra.</h2><p>Escreva no Archive Nova Writer e publique quando estiver pronta.</p><Link className="primary-button" href="/write">Começar a escrever</Link></div>}
+        ))}</div> : <div className="manage-empty"><span><NovaIcon name="write" size={30} /></span><h2>Você ainda não publicou nenhuma obra.</h2><p>Escreva no Archive Nova Writer e publique quando estiver pronta.</p><Link className="primary-button" href="/write">Começar a escrever</Link></div>}
       </div>
     </main>
   )
