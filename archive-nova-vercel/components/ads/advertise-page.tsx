@@ -24,8 +24,9 @@ export function AdvertisePage() {
 
   async function load() {
     if (!supabase) return
-    const settingsResponse = await supabase.from('platform_admin_settings').select('allow_new_ad_requests').eq('id', 1).maybeSingle()
-    if (settingsResponse.data) setAdRequestsOpen(settingsResponse.data.allow_new_ad_requests !== false)
+    const settingsResponse = await supabase.rpc('platform_public_settings')
+    const publicSettings = (settingsResponse.data || {}) as { allow_new_ad_requests?: boolean }
+    setAdRequestsOpen(publicSettings.allow_new_ad_requests !== false)
     const current = (await supabase.auth.getUser()).data.user || null
     setUser(current)
     if (!current) return
