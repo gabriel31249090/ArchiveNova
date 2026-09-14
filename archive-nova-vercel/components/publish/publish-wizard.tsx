@@ -7,15 +7,18 @@ import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { TaxonomyPicker } from '@/components/taxonomy/taxonomy-picker'
 import { clearLocalWriterDraft, htmlToPlainText, readLocalWriterDraft, sanitizeStoryHtml, type LocalWriterDraft } from '@/lib/writer-draft'
+import { clearCloudMirror, type CloudDraft } from '@/lib/cloud-drafts'
 
 const STEPS = ['Informações', 'Fandoms e tags', 'Classificação', 'Revisão'] as const
 
-export function PublishWizard() {
+export function PublishWizard({ draftId }: { draftId?: string } = {}) {
   const router = useRouter()
   const configured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
   const supabase = useMemo(() => configured ? createClient() : null, [configured])
 
   const [draft, setDraft] = useState<LocalWriterDraft | null>(null)
+  const [cloudDraft, setCloudDraft] = useState<CloudDraft | null>(null)
+  const [draftLoading, setDraftLoading] = useState(Boolean(draftId))
   const [user, setUser] = useState<User | null>(null)
   const [authChecked, setAuthChecked] = useState(false)
   const [step, setStep] = useState(0)
@@ -32,10 +35,11 @@ export function PublishWizard() {
   const [error, setError] = useState('')
 
   useEffect(() => {
+    if (draftId) return
     const saved = readLocalWriterDraft()
     setDraft(saved)
     setTitle(saved?.title || '')
-  }, [])
+  }, [draftId])
 
   useEffect(() => {
     if (!supabase) {
@@ -49,7 +53,28 @@ export function PublishWizard() {
     })
   }, [supabase])
 
-  const wordCount = useMemo(() => htmlToPlainText(draft?.content || '').split(/\s+/u).filter(Boolean).length, [draft?.content])
+  useEffect(() => {
+    if (!draftId || !supabase || !user) return
+    const client = supabase
+    void (async () => {
+      setDraftLoading(true)
+      const { data, error: loadError } = await client.rpc('get_writer_draft', { target_draft: draftId })
+      if (loadError || !data) {
+        console.error(loadError)
+        setError('Não foi possível carregar este rascunho da nuvem.')
+        setDraftLoading(false)
+        return
+      }
+      const cloud = data as unknown as CloudDraft
+      const first = cloud.chapters?.[0]
+      setCloudDraft(cloud)
+      setTitle(cloud.title || '')
+      setDraft(first ? { version: 1, title: cloud.title || '', chapterTitle: first.title || '', content: first.content_html || '<p></p>', updatedAt: cloud.updated_at || new Date().toISOString() } : null)
+      setDraftLoading(false)
+    })()
+  }, [draftId, supabase, user])
+
+  const wordCount = useMemo(() => cloudDraft ? cloudDraft.chapters.reduce((sum, chapter) => sum + Number(chapter.word_count || 0), 0) : htmlToPlainText(draft?.content || '').split(/\s+/u).filter(Boolean).length, [cloudDraft, draft?.content])
   const chapterPreview = useMemo(() => htmlToPlainText(draft?.content || '').slice(0, 720), [draft?.content])
 
   const validateStep = useCallback((targetStep: number) => {
@@ -82,19 +107,14 @@ export function PublishWizard() {
 
     setBusy(true)
     setError('')
-    const { data, error: publishError } = await supabase.rpc('publish_work', {
-      work_title: title.trim(),
-      work_summary: summary.trim(),
-      work_rating: rating,
-      work_status: status,
-      fandom_names: fandoms,
-      tag_names: tags,
-      chapter_title: draft.chapterTitle.trim() || null,
-      chapter_content: sanitizeStoryHtml(draft.content),
-      expected_chapter_count: expected ? Number(expected) : null,
-      work_language: language,
-      allow_comments_input: allowComments,
-    })
+    const payload = {
+      work_title: title.trim(), work_summary: summary.trim(), work_rating: rating, work_status: status,
+      fandom_names: fandoms, tag_names: tags, expected_chapter_count: expected ? Number(expected) : null,
+      work_language: language, allow_comments_input: allowComments,
+    }
+    const { data, error: publishError } = draftId
+      ? await supabase.rpc('publish_writer_draft', { target_draft: draftId, ...payload })
+      : await supabase.rpc('publish_work', { ...payload, chapter_title: draft.chapterTitle.trim() || null, chapter_content: sanitizeStoryHtml(draft.content) })
     setBusy(false)
 
     if (publishError) {
@@ -103,7 +123,8 @@ export function PublishWizard() {
       return
     }
 
-    clearLocalWriterDraft()
+    if (draftId) clearCloudMirror(draftId)
+    else clearLocalWriterDraft()
     router.push(`/works/${String(data)}/manage?published=1`)
   }
 
@@ -115,6 +136,10 @@ export function PublishWizard() {
     return <main className="publish-page"><div className="publish-gate"><span className="publish-loader" /><h1>Preparando publicação…</h1></div></main>
   }
 
+  if (draftLoading && user) {
+    return <main className="publish-page"><div className="publish-gate"><span className="publish-loader" /><h1>Carregando rascunho da nuvem…</h1></div></main>
+  }
+
   if (!user) {
     return (
       <main className="publish-page">
@@ -124,8 +149,8 @@ export function PublishWizard() {
           <h1>Entre na sua conta para publicar.</h1>
           <p>Seu texto continua salvo neste navegador. Depois do login, volte para esta página.</p>
           <div className="publish-gate-actions">
-            <Link className="primary-button large" href="/explore?auth=login&return=/publish">Entrar</Link>
-            <Link className="ghost-button large" href="/write">Voltar ao editor</Link>
+            <Link className="primary-button large" href={`/explore?auth=login&return=${encodeURIComponent(draftId ? `/publish/${draftId}` : '/publish')}`}>Entrar</Link>
+            <Link className="ghost-button large" href={draftId ? `/write/${draftId}` : "/write"}>Voltar ao editor</Link>
           </div>
         </div>
       </main>
@@ -140,7 +165,7 @@ export function PublishWizard() {
           <p className="eyebrow">Nenhum texto encontrado</p>
           <h1>Escreva antes de publicar.</h1>
           <p>O fluxo de publicação usa o texto salvo pelo Archive Nova Writer neste navegador.</p>
-          <Link className="primary-button large" href="/write">Abrir editor</Link>
+          <Link className="primary-button large" href={draftId ? `/write/${draftId}` : "/write"}>Abrir editor</Link>
         </div>
       </main>
     )
@@ -150,7 +175,7 @@ export function PublishWizard() {
     <main className="publish-page">
       <header className="publish-topbar">
         <Link className="publish-brand" href="/"><span>✦</span><strong>Archive Nova</strong></Link>
-        <div className="publish-top-actions"><Link href="/write">← Voltar ao editor</Link><Link href="/explore">Explorar</Link></div>
+        <div className="publish-top-actions"><Link href={draftId ? `/write/${draftId}` : "/write"}>← Voltar ao editor</Link><Link href="/explore">Explorar</Link></div>
       </header>
 
       <div className="publish-shell">
@@ -167,7 +192,7 @@ export function PublishWizard() {
               </li>
             ))}
           </ol>
-          <div className="publish-draft-card"><span>PRIMEIRO CAPÍTULO</span><strong>{draft.chapterTitle || 'Sem título'}</strong><small>{wordCount.toLocaleString('pt-BR')} palavras</small></div>
+          <div className="publish-draft-card"><span>{cloudDraft ? `${cloudDraft.chapters.length} CAPÍTULO${cloudDraft.chapters.length === 1 ? '' : 'S'}` : 'PRIMEIRO CAPÍTULO'}</span><strong>{draft.chapterTitle || 'Sem título'}</strong><small>{wordCount.toLocaleString('pt-BR')} palavras no total</small></div>
         </aside>
 
         <section className="publish-panel">
@@ -222,7 +247,7 @@ export function PublishWizard() {
               <article className="publish-review-card">
                 <div className="publish-review-title"><span className="rating-badge">{rating === 'GENERAL' ? 'G' : rating === 'TEEN' ? 'T' : rating === 'MATURE' ? 'M' : rating === 'EXPLICIT' ? 'E' : '?'}</span><div><h3>{title || 'Sem título'}</h3><p>{summary || 'Sem resumo.'}</p></div></div>
                 <div className="publish-review-tags">{fandoms.map((item) => <span className="primary" key={item}>{item}</span>)}{tags.map((item) => <span key={item}>{item}</span>)}</div>
-                <dl><div><dt>Status</dt><dd>{status === 'ONGOING' ? 'Em andamento' : status === 'COMPLETE' ? 'Concluída' : 'Em hiato'}</dd></div><div><dt>Primeiro capítulo</dt><dd>{draft.chapterTitle || 'Capítulo 1'}</dd></div><div><dt>Extensão</dt><dd>{wordCount.toLocaleString('pt-BR')} palavras</dd></div><div><dt>Comentários</dt><dd>{allowComments ? 'Permitidos' : 'Desativados'}</dd></div></dl>
+                <dl><div><dt>Status</dt><dd>{status === 'ONGOING' ? 'Em andamento' : status === 'COMPLETE' ? 'Concluída' : 'Em hiato'}</dd></div><div><dt>Capítulos</dt><dd>{cloudDraft?.chapters.length || 1}</dd></div><div><dt>Extensão</dt><dd>{wordCount.toLocaleString('pt-BR')} palavras</dd></div><div><dt>Comentários</dt><dd>{allowComments ? 'Permitidos' : 'Desativados'}</dd></div></dl>
                 <div className="publish-preview"><span>PRÉVIA</span><p>{chapterPreview}{htmlToPlainText(draft.content).length > 720 ? '…' : ''}</p></div>
               </article>
             </div>

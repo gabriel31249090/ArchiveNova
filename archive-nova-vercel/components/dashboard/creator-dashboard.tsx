@@ -6,6 +6,7 @@ import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { NovaHeader } from '@/components/shared/nova-header'
 import type { CreatorDashboardTotals, CreatorRecentComment, WorkCardData } from '@/lib/types'
+import type { CloudDraftListItem } from '@/lib/cloud-drafts'
 
 function normalizeWork(row: Record<string, unknown>): WorkCardData {
   return {
@@ -33,9 +34,10 @@ export function CreatorDashboard() {
   const [works, setWorks] = useState<WorkCardData[]>([])
   const [topWorks, setTopWorks] = useState<WorkCardData[]>([])
   const [comments, setComments] = useState<CreatorRecentComment[]>([])
+  const [drafts, setDrafts] = useState<CloudDraftListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [tab, setTab] = useState<'overview' | 'works' | 'activity'>('overview')
+  const [tab, setTab] = useState<'overview' | 'works' | 'drafts' | 'activity'>('overview')
   const [filter, setFilter] = useState<'ALL' | WorkCardData['status']>('ALL')
   const [query, setQuery] = useState('')
 
@@ -48,9 +50,10 @@ export function CreatorDashboard() {
       setUser(current)
       if (!current) { setLoading(false); return }
 
-      const [profileResponse, dashboardResponse] = await Promise.all([
+      const [profileResponse, dashboardResponse, draftsResponse] = await Promise.all([
         client.from('profiles').select('username,display_name').eq('id', current.id).maybeSingle(),
         client.rpc('creator_dashboard'),
+        client.rpc('my_writer_drafts'),
       ])
       if (profileResponse.data) {
         const profile = profileResponse.data as { username: string; display_name: string | null }
@@ -71,9 +74,46 @@ export function CreatorDashboard() {
       setComments(((data.recent_comments || []) as Record<string, unknown>[]).map((item) => ({
         id: String(item.id || ''), body: String(item.body || ''), created_at: String(item.created_at || ''), chapter_id: String(item.chapter_id || ''), chapter_number: Number(item.chapter_number || 0), chapter_title: item.chapter_title == null ? null : String(item.chapter_title), work_id: String(item.work_id || ''), work_title: String(item.work_title || ''), user_id: String(item.user_id || ''), username: String(item.username || ''), display_name: String(item.display_name || item.username || ''),
       })))
+      if (!draftsResponse.error) setDrafts(((draftsResponse.data || []) as Record<string, unknown>[]).map((item) => ({
+        id: String(item.id || ''), title: String(item.title || ''), revision: Number(item.revision || 1), created_at: String(item.created_at || ''), updated_at: String(item.updated_at || ''), chapter_count: Number(item.chapter_count || 0), word_count: Number(item.word_count || 0), first_chapter_title: String(item.first_chapter_title || ''),
+      })))
       setLoading(false)
     })()
   }, [supabase])
+
+  async function refreshDrafts() {
+    if (!supabase) return
+    const { data, error: refreshError } = await supabase.rpc('my_writer_drafts')
+    if (refreshError) { setError('Não foi possível atualizar os rascunhos.'); return }
+    setDrafts(((data || []) as Record<string, unknown>[]).map((item) => ({
+      id: String(item.id || ''), title: String(item.title || ''), revision: Number(item.revision || 1), created_at: String(item.created_at || ''), updated_at: String(item.updated_at || ''), chapter_count: Number(item.chapter_count || 0), word_count: Number(item.word_count || 0), first_chapter_title: String(item.first_chapter_title || ''),
+    })))
+  }
+
+  async function renameDraft(item: CloudDraftListItem) {
+    if (!supabase) return
+    const nextTitle = window.prompt('Novo título do rascunho:', item.title || '')
+    if (nextTitle === null) return
+    const { error: renameError } = await supabase.rpc('rename_writer_draft', { target_draft: item.id, next_title: nextTitle })
+    if (renameError) { setError('Não foi possível renomear o rascunho.'); return }
+    await refreshDrafts()
+  }
+
+  async function duplicateDraft(id: string) {
+    if (!supabase) return
+    const { data, error: duplicateError } = await supabase.rpc('duplicate_writer_draft', { target_draft: id })
+    if (duplicateError) { setError('Não foi possível duplicar o rascunho.'); return }
+    await refreshDrafts()
+    if (data && window.confirm('Cópia criada. Abrir agora?')) window.location.href = `/write/${String(data)}`
+  }
+
+  async function deleteDraft(item: CloudDraftListItem) {
+    if (!supabase) return
+    if (!window.confirm(`Excluir o rascunho “${item.title || 'Sem título'}”? Essa ação não pode ser desfeita.`)) return
+    const { error: deleteError } = await supabase.rpc('delete_writer_draft', { target_draft: item.id })
+    if (deleteError) { setError('Não foi possível excluir o rascunho.'); return }
+    setDrafts((current) => current.filter((draft) => draft.id !== item.id))
+  }
 
   const filteredWorks = useMemo(() => works.filter((work) => {
     const matchesFilter = filter === 'ALL' || work.status === filter
@@ -99,6 +139,7 @@ export function CreatorDashboard() {
         <nav className="studio-tabs" aria-label="Seções do Studio">
           <button className={tab === 'overview' ? 'active' : ''} onClick={() => setTab('overview')}>Visão geral</button>
           <button className={tab === 'works' ? 'active' : ''} onClick={() => setTab('works')}>Minhas obras <span>{totals.works}</span></button>
+          <button className={tab === 'drafts' ? 'active' : ''} onClick={() => setTab('drafts')}>Rascunhos <span>{drafts.length}</span></button>
           <button className={tab === 'activity' ? 'active' : ''} onClick={() => setTab('activity')}>Atividade <span>{totals.unread_notifications}</span></button>
         </nav>
 
@@ -127,7 +168,7 @@ export function CreatorDashboard() {
 
             <section className="studio-quick-actions">
               <Link href="/write"><span>✎</span><div><strong>Escrever</strong><small>Começar uma nova história</small></div><b>→</b></Link>
-              <button onClick={() => setTab('works')}><span>☷</span><div><strong>Gerenciar obras</strong><small>Editar capítulos e publicação</small></div><b>→</b></button>
+              <button onClick={() => setTab('drafts')}><span>☁</span><div><strong>Seus rascunhos</strong><small>{drafts.length ? `${drafts.length} sincronizado${drafts.length === 1 ? '' : 's'}` : 'Nenhum rascunho ainda'}</small></div><b>→</b></button>
               <Link href="/notifications"><span>♢</span><div><strong>Ver atividade</strong><small>{totals.unread_notifications ? `${totals.unread_notifications} não lidas` : 'Tudo em dia'}</small></div><b>→</b></Link>
             </section>
           </div>
@@ -140,6 +181,13 @@ export function CreatorDashboard() {
               <div className="studio-filter-row">{([['ALL','Todas'],['ONGOING','Em andamento'],['COMPLETE','Concluídas'],['HIATUS','Hiato'],['DRAFT','Rascunhos']] as const).map(([value,label]) => <button key={value} className={filter === value ? 'active' : ''} onClick={() => setFilter(value)}>{label}</button>)}</div>
             </div>
             {filteredWorks.length ? <div className="studio-work-list">{filteredWorks.map((work) => <article key={work.id} className="studio-work-row"><div className="studio-work-rating">{work.rating === 'GENERAL' ? 'G' : work.rating === 'TEEN' ? 'T' : work.rating === 'MATURE' ? 'M' : work.rating === 'EXPLICIT' ? 'E' : '?'}</div><div className="studio-work-copy"><div className="studio-work-title"><Link href={`/works/${work.id}`}>{work.title}</Link><span className={`studio-status ${work.status.toLowerCase()}`}>{statusLabel(work.status)}</span></div><p>{work.summary || 'Sem resumo.'}</p><div className="studio-work-tags">{work.fandoms.slice(0,2).map((tag) => <span key={tag}>{tag}</span>)}</div></div><div className="studio-work-numbers"><span><strong>{fmt(work.word_count)}</strong> palavras</span><span><strong>{fmt(work.hits_count)}</strong> leituras</span><span><strong>{fmt(work.kudos_count)}</strong> kudos</span><span><strong>{work.chapter_count}{work.expected_chapters ? `/${work.expected_chapters}` : ''}</strong> capítulos</span></div><div className="studio-work-actions"><small>Atualizada {date(work.updated_at)}</small><Link className="secondary-button" href={`/works/${work.id}/manage`}>Gerenciar</Link></div></article>)}</div> : <div className="studio-empty large"><span>⌕</span><h2>Nenhuma obra encontrada</h2><p>Tente outro filtro ou comece uma nova história.</p><Link className="primary-button" href="/write">Nova história</Link></div>}
+          </section>
+        ) : null}
+
+        {tab === 'drafts' ? (
+          <section className="studio-drafts-section">
+            <div className="studio-drafts-head"><div><p className="eyebrow">Writer Cloud</p><h2>Rascunhos sincronizados</h2><p>Continue exatamente de onde parou em qualquer dispositivo.</p></div><Link className="primary-button" href="/write">＋ Novo rascunho</Link></div>
+            {drafts.length ? <div className="studio-draft-grid">{drafts.map((draft) => <article key={draft.id} className="studio-draft-card"><div className="studio-draft-icon">✎</div><div className="studio-draft-copy"><span>RASCUNHO · {draft.chapter_count} {draft.chapter_count === 1 ? 'capítulo' : 'capítulos'}</span><h3>{draft.title || 'Obra sem título'}</h3><p>{draft.first_chapter_title || 'Primeiro capítulo sem título'}</p><small>{fmt(draft.word_count)} palavras · editado {date(draft.updated_at)}</small></div><div className="studio-draft-actions"><Link className="primary-button" href={`/write/${draft.id}`}>Continuar</Link><button type="button" onClick={() => void renameDraft(draft)}>Renomear</button><button type="button" onClick={() => void duplicateDraft(draft.id)}>Duplicar</button><button className="danger" type="button" onClick={() => void deleteDraft(draft)}>Excluir</button></div></article>)}</div> : <div className="studio-empty large"><span>✎</span><h2>Nenhum rascunho na nuvem</h2><p>Comece uma história e o Archive Nova salvará tudo automaticamente na sua conta.</p><Link className="primary-button" href="/write">Começar a escrever</Link></div>}
           </section>
         ) : null}
 

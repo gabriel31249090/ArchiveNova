@@ -1,6 +1,6 @@
-# Archive Nova v2 — Vercel + Supabase
+# Archive Nova v3.0.0 — Vercel + Supabase
 
-Archive Nova é uma base funcional para um arquivo comunitário de histórias inspirado em sistemas de arquivo como o AO3, mantendo o redesign visual criado na v1, mas substituindo completamente a arquitetura Java/Spring por uma arquitetura adequada à Vercel e ao Supabase.
+Archive Nova é uma plataforma comunitária de histórias inspirada em arquivos como o AO3, com experiência própria de leitura, publicação, Creator Studio e Writer Pro sincronizado entre dispositivos.
 
 **Não há dados falsos ou seeds de demonstração.** Um banco novo começa com 0 usuários, 0 obras, 0 fandoms, 0 tags, 0 kudos e 0 comentários.
 
@@ -127,6 +127,12 @@ Não é necessário Docker, VPS, Java, Maven ou configurar um servidor separado.
 
 ## Funcionalidades já conectadas ao banco real
 
+- Writer Pro com rascunhos sincronizados no Supabase e cópia local de segurança;
+- autosave, recuperação offline e proteção contra conflitos entre dispositivos;
+- rascunhos multi-capítulo, duplicação, renomeação e exclusão;
+- publicação transacional de todos os capítulos de um rascunho;
+- Creator Studio com gestão de obras e rascunhos;
+- perfis públicos, seguidores, assinaturas, notificações e moderação;
 - cadastro com Supabase Auth;
 - confirmação de e-mail compatível com SSR;
 - login/logout e sessão em cookies;
