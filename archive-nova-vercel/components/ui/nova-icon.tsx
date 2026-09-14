@@ -1,4 +1,4 @@
-import type { SVGProps } from 'react'
+import type { ReactNode, SVGProps } from 'react'
 
 export type NovaIconName =
   | 'archive' | 'search' | 'feed' | 'posts' | 'studio' | 'bell' | 'user'
@@ -12,7 +12,7 @@ type Props = SVGProps<SVGSVGElement> & {
   strokeWidth?: number
 }
 
-const paths: Record<NovaIconName, React.ReactNode> = {
+const paths: Record<NovaIconName, ReactNode> = {
   archive: <><path d="M12 3 9.7 8.1 4 10.4l5.7 2.3L12 18l2.3-5.3 5.7-2.3-5.7-2.3L12 3Z"/><path d="M5 3v3M3.5 4.5h3M19 17v4M17 19h4"/></>,
   search: <><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.2 4.2"/></>,
   feed: <><path d="M5 7.5a11.5 11.5 0 0 1 11.5 11.5"/><path d="M5 12.5A6.5 6.5 0 0 1 11.5 19"/><circle cx="6" cy="19" r="1.5"/></>,
