@@ -21,6 +21,9 @@ function normalizeChapter(row: Record<string, unknown>): Chapter {
 
 function ratingLabel(rating: WorkCardData['rating']) { return ({ GENERAL: 'Livre', TEEN: 'Teen', MATURE: 'Mature', EXPLICIT: 'Explicit', NOT_RATED: 'Não classificada' } as const)[rating] }
 function fmt(value: number) { return new Intl.NumberFormat('pt-BR', { notation: value >= 10000 ? 'compact' : 'standard', maximumFractionDigits: 1 }).format(value || 0) }
+type ReaderTheme = 'DARK' | 'LIGHT' | 'SEPIA'
+type ReaderFont = 'SERIF' | 'SANS' | 'MONO'
+type LibraryState = 'TO_READ' | 'READING' | 'COMPLETED' | 'FAVORITE'
 
 export function PublicWorkPage({ workId }: { workId: string }) {
   const configured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
@@ -30,6 +33,13 @@ export function PublicWorkPage({ workId }: { workId: string }) {
   const [chapterId, setChapterId] = useState('')
   const [comments, setComments] = useState<CommentItem[]>([])
   const [fontSize, setFontSize] = useState(19)
+  const [readerTheme, setReaderTheme] = useState<ReaderTheme>('DARK')
+  const [readerFont, setReaderFont] = useState<ReaderFont>('SERIF')
+  const [lineHeight, setLineHeight] = useState(1.8)
+  const [readerWidth, setReaderWidth] = useState(760)
+  const [focusMode, setFocusMode] = useState(false)
+  const [readerPanelOpen, setReaderPanelOpen] = useState(false)
+  const [libraryState, setLibraryStateValue] = useState<LibraryState | ''>('')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
@@ -57,9 +67,35 @@ export function PublicWorkPage({ workId }: { workId: string }) {
     const raw = data as { work: Record<string, unknown>; chapters: Record<string, unknown>[] }
     const next: WorkDetail = { work: normalizeWork(raw.work), chapters: (raw.chapters || []).map(normalizeChapter) }
     setDetail(next)
-    const supportResponse = await supabase.from('creator_support_profiles').select('enabled').eq('user_id', next.work.creator_id).eq('enabled', true).maybeSingle()
+    const [supportResponse, prefResponse, progressResponse, libraryResponse] = await Promise.all([
+      supabase.from('creator_support_profiles').select('enabled').eq('user_id', next.work.creator_id).eq('enabled', true).maybeSingle(),
+      currentUser ? supabase.rpc('get_reader_preferences') : Promise.resolve({ data: null }),
+      currentUser ? supabase.rpc('get_reading_progress', { target_work: next.work.id }) : Promise.resolve({ data: null }),
+      currentUser ? supabase.from('library_entries').select('state').eq('user_id', currentUser.id).eq('work_id', next.work.id).maybeSingle() : Promise.resolve({ data: null }),
+    ])
     setSupportEnabled(Boolean(supportResponse.data?.enabled))
-    setChapterId((current) => current && next.chapters.some((chapter) => chapter.id === current) ? current : next.chapters[0]?.id || '')
+    const stored = typeof window !== 'undefined' ? window.localStorage.getItem('archive-nova:reader:prefs:v1') : null
+    let localPrefs: Record<string, unknown> = {}
+    try { localPrefs = stored ? JSON.parse(stored) as Record<string, unknown> : {} } catch {}
+    const prefs = (prefResponse.data || localPrefs || {}) as Record<string, unknown>
+    setReaderTheme(String(prefs.theme || localPrefs.theme || 'DARK') as ReaderTheme)
+    setReaderFont(String(prefs.font || localPrefs.font || 'SERIF') as ReaderFont)
+    setFontSize(Number(prefs.font_size || localPrefs.font_size || 19))
+    setLineHeight(Number(prefs.line_height || localPrefs.line_height || 1.8))
+    setReaderWidth(Number(prefs.width || localPrefs.width || 760))
+    setFocusMode(Boolean(prefs.focus ?? localPrefs.focus ?? false))
+    if (libraryResponse.data?.state) setLibraryStateValue(String(libraryResponse.data.state) as LibraryState)
+    const progress = (progressResponse.data || {}) as { chapter_id?: string; scroll_offset?: number }
+    const requested = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('chapter') : null
+    const initialChapter = requested && next.chapters.some(ch => ch.id === requested)
+      ? requested
+      : progress.chapter_id && next.chapters.some(ch => ch.id === progress.chapter_id)
+        ? progress.chapter_id
+        : next.chapters[0]?.id || ''
+    setChapterId((current) => current && next.chapters.some((chapter) => chapter.id === current) ? current : initialChapter)
+    if (progress.scroll_offset && typeof window !== 'undefined' && !requested) {
+      window.setTimeout(() => window.scrollTo({ top: Number(progress.scroll_offset) || 0, behavior: 'instant' as ScrollBehavior }), 180)
+    }
     setLoading(false)
   }, [supabase, workId])
 
@@ -75,8 +111,38 @@ export function PublicWorkPage({ workId }: { workId: string }) {
   useEffect(() => {
     if (!detail || !currentChapter) return
     void fetch(`/api/works/${detail.work.id}/hit`, { method: 'POST' })
+    void fetch(`/api/works/${detail.work.id}/chapters/${currentChapter.id}/hit`, { method: 'POST' })
     if (user && supabase) void supabase.rpc('record_history', { target_work: detail.work.id, target_chapter: currentChapter.id })
-  }, [detail?.work.id])
+  }, [detail?.work.id, currentChapter?.id, user, supabase])
+
+  useEffect(() => {
+    if (!detail || !currentChapter || !user || !supabase) return
+    let timer: number | undefined
+    const save = () => {
+      const article = document.querySelector('.public-chapter-paper') as HTMLElement | null
+      if (!article) return
+      const rect = article.getBoundingClientRect()
+      const articleTop = window.scrollY + rect.top
+      const travelled = Math.max(0, window.scrollY + window.innerHeight * 0.45 - articleTop)
+      const pct = Math.max(0, Math.min(100, (travelled / Math.max(article.offsetHeight, 1)) * 100))
+      void supabase.rpc('save_reading_progress', {
+        target_work: detail.work.id,
+        target_chapter: currentChapter.id,
+        progress: pct,
+        scroll_y: Math.max(0, Math.round(window.scrollY)),
+      })
+    }
+    const onScroll = () => {
+      if (timer) window.clearTimeout(timer)
+      timer = window.setTimeout(save, 900)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      if (timer) window.clearTimeout(timer)
+      save()
+    }
+  }, [detail?.work.id, currentChapter?.id, user, supabase])
 
   function notify(value: string) {
     setMessage(value)
@@ -119,6 +185,36 @@ export function PublicWorkPage({ workId }: { workId: string }) {
     if (actionError) return notify('Não foi possível alterar a inscrição.')
     setDetail((current) => current ? { ...current, work: { ...current.work, subscribed: Boolean(data) } } : current)
     notify(data ? 'Você receberá avisos de novos capítulos.' : 'Inscrição removida.')
+  }
+
+  async function saveReaderPreferences(next?: Partial<{ theme:ReaderTheme;font:ReaderFont;font_size:number;line_height:number;width:number;focus:boolean }>) {
+    const prefs = {
+      theme: next?.theme ?? readerTheme,
+      font: next?.font ?? readerFont,
+      font_size: next?.font_size ?? fontSize,
+      line_height: next?.line_height ?? lineHeight,
+      width: next?.width ?? readerWidth,
+      focus: next?.focus ?? focusMode,
+    }
+    try { window.localStorage.setItem('archive-nova:reader:prefs:v1', JSON.stringify(prefs)) } catch {}
+    if (user && supabase) {
+      await supabase.rpc('save_reader_preferences', {
+        next_theme: prefs.theme,
+        next_font: prefs.font,
+        next_font_size: prefs.font_size,
+        next_line_height: prefs.line_height,
+        next_width: prefs.width,
+        next_focus: prefs.focus,
+      })
+    }
+  }
+
+  async function setLibraryState(state: LibraryState) {
+    if (!detail || !supabase || !requireLogin()) return
+    const { error: libraryError } = await supabase.rpc('set_library_state', { target_work: detail.work.id, next_state: state })
+    if (libraryError) return notify('Não foi possível atualizar sua biblioteca.')
+    setLibraryStateValue(state)
+    notify('Biblioteca atualizada.')
   }
 
   async function submitComment(event: FormEvent<HTMLFormElement>) {
@@ -166,7 +262,7 @@ export function PublicWorkPage({ workId }: { workId: string }) {
   return (
     <>
       <NovaHeader />
-      <main className="public-reader-page" style={{ '--reader-size': `${fontSize}px` } as CSSProperties}>
+      <main className={`public-reader-page reader-pro reader-theme-${readerTheme.toLowerCase()} reader-font-${readerFont.toLowerCase()} ${focusMode ? 'reader-focus-mode' : ''}`} style={{ '--reader-size': `${fontSize}px`, '--reader-line': String(lineHeight), '--reader-width': `${readerWidth}px` } as CSSProperties}>
         <section className="public-work-hero">
           <div className="public-work-kicker"><span className="rating-badge">{work.rating === 'GENERAL' ? 'G' : work.rating === 'TEEN' ? 'T' : work.rating === 'MATURE' ? 'M' : work.rating === 'EXPLICIT' ? 'E' : '?'}</span><span>{ratingLabel(work.rating)}</span><i>•</i><span>{work.status === 'COMPLETE' ? 'Concluída' : work.status === 'HIATUS' ? 'Em hiato' : 'Em andamento'}</span></div>
           <h1>{work.title}</h1>
@@ -181,6 +277,7 @@ export function PublicWorkPage({ workId }: { workId: string }) {
             {isOwner ? <Link className="reader-social-button" href={`/works/${work.id}/contribute`}><NovaIcon name="branch" size={16} /> Contribuições</Link> : work.allow_contributions ? <Link className="reader-social-button" href={`/works/${work.id}/contribute`}><NovaIcon name="branch" size={16} /> Contribuir</Link> : null}
             {!isOwner && supportEnabled ? <Link className="reader-social-button support" href={`/support/${encodeURIComponent(work.author_username)}`}><NovaIcon name="heart" size={16} /> Apoiar autor</Link> : null}
             {!isOwner ? <button className="reader-social-button subtle" onClick={() => setReportTarget({ type: 'work', id: work.id, label: work.title })}><NovaIcon name="flag" size={16} /> Denunciar</button> : null}
+            {!isOwner ? <select className="reader-library-select" value={libraryState} onChange={(event) => { if (event.target.value) void setLibraryState(event.target.value as LibraryState) }} aria-label="Adicionar à biblioteca"><option value="">Biblioteca…</option><option value="TO_READ">Quero ler</option><option value="READING">Lendo</option><option value="COMPLETED">Concluída</option><option value="FAVORITE">Favorita</option></select> : null}
           </div>
         </section>
 
@@ -191,7 +288,14 @@ export function PublicWorkPage({ workId }: { workId: string }) {
           </aside>
 
           <section className="public-reader-main">
-            <div className="public-reader-controls"><div><button onClick={() => setFontSize((value) => Math.max(14, value - 1))}>A−</button><span>{fontSize}px</span><button onClick={() => setFontSize((value) => Math.min(30, value + 1))}>A＋</button></div><span>{currentChapter ? `Capítulo ${currentChapter.chapter_number} de ${detail.chapters.length}` : ''}</span></div>
+            <div className="public-reader-controls reader-pro-controls"><div><button onClick={() => { const next=Math.max(14,fontSize-1);setFontSize(next);void saveReaderPreferences({font_size:next}) }}>A−</button><span>{fontSize}px</span><button onClick={() => { const next=Math.min(32,fontSize+1);setFontSize(next);void saveReaderPreferences({font_size:next}) }}>A＋</button><button className={readerPanelOpen ? 'active' : ''} onClick={() => setReaderPanelOpen(v=>!v)}>Aa</button></div><span>{currentChapter ? `Capítulo ${currentChapter.chapter_number} de ${detail.chapters.length}` : ''}</span></div>
+            {readerPanelOpen ? <div className="reader-pro-panel">
+              <label>Tema<select value={readerTheme} onChange={(event) => { const next=event.target.value as ReaderTheme;setReaderTheme(next);void saveReaderPreferences({theme:next}) }}><option value="DARK">Escuro</option><option value="LIGHT">Claro</option><option value="SEPIA">Sépia</option></select></label>
+              <label>Fonte<select value={readerFont} onChange={(event) => { const next=event.target.value as ReaderFont;setReaderFont(next);void saveReaderPreferences({font:next}) }}><option value="SERIF">Serif</option><option value="SANS">Sans</option><option value="MONO">Mono</option></select></label>
+              <label>Espaçamento<input type="range" min="1.3" max="2.4" step="0.1" value={lineHeight} onChange={(event) => { const next=Number(event.target.value);setLineHeight(next);void saveReaderPreferences({line_height:next}) }} /><span>{lineHeight.toFixed(1)}</span></label>
+              <label>Largura<input type="range" min="560" max="1050" step="20" value={readerWidth} onChange={(event) => { const next=Number(event.target.value);setReaderWidth(next);void saveReaderPreferences({width:next}) }} /><span>{readerWidth}px</span></label>
+              <label className="reader-focus-toggle"><input type="checkbox" checked={focusMode} onChange={(event) => { const next=event.target.checked;setFocusMode(next);void saveReaderPreferences({focus:next}) }} /><span>Modo foco</span></label>
+            </div> : null}
             {currentChapter ? <article className="public-chapter-paper">
               <header><p className="eyebrow">Capítulo {String(currentChapter.chapter_number).padStart(2, '0')}</p><h2>{currentChapter.title || `Capítulo ${currentChapter.chapter_number}`}</h2>{currentChapter.notes_before ? <div className="chapter-note before"><strong>Nota do autor</strong><p>{currentChapter.notes_before}</p></div> : null}</header>
               <div className="reader-rich-text public-reader-rich" dangerouslySetInnerHTML={{ __html: sanitizeStoryHtml(currentChapter.content) }} />
