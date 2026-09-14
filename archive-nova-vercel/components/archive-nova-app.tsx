@@ -688,7 +688,8 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
             <button className={`nav-item ${view === 'explore' ? 'active' : ''}`} onClick={() => changeView('explore')}><span>⌕</span> Explorar</button>
             <button className={`nav-item ${view === 'library' ? 'active' : ''}`} onClick={() => changeView('library')}><span>♡</span> Minha biblioteca</button>
             <button className={`nav-item ${view === 'history' ? 'active' : ''}`} onClick={() => changeView('history')}><span>↺</span> Histórico</button>
-            <Link className="nav-item" href="/dashboard/works"><span>✎</span> Minhas obras</Link>
+            <Link className="nav-item" href="/dashboard"><span>◫</span> Creator Studio</Link>
+            <Link className="nav-item" href="/notifications"><span>♢</span> Notificações</Link>
           </nav>
 
           <div className="sidebar-section">
@@ -704,7 +705,7 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
             <button className="theme-toggle" onClick={toggleTheme} aria-label="Alternar tema">
               <span>{theme === 'dark' ? '☀' : '☾'}</span><span>{theme === 'dark' ? 'Tema claro' : 'Tema escuro'}</span>
             </button>
-            <button className="profile-mini profile-button" onClick={() => { setAuthError(''); authDialog.current?.showModal() }}>
+            <button className="profile-mini profile-button" onClick={() => { if (profile) { window.location.href = `/users/${encodeURIComponent(profile.username)}`; return } setAuthError(''); authDialog.current?.showModal() }}>
               <div className="avatar">{profile?.username?.slice(0, 1).toUpperCase() || '?'}</div>
               <div>
                 <strong>{profile?.display_name || profile?.username || 'Entrar'}</strong>
@@ -992,12 +993,12 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
                   {reader.chapters.map((chapter) => <option key={chapter.id} value={chapter.id}>{chapter.chapter_number}. {chapter.title || `Capítulo ${chapter.chapter_number}`}</option>)}
                 </select>
               </label>
-              {isOwner && <Link className="secondary-button reader-manage-link" href={`/works/${reader.work.id}/manage`} onClick={() => readerDialog.current?.close()}>⚙ Gerenciar obra</Link>}
+              <div className="reader-page-links"><Link className="secondary-button reader-manage-link" href={`/works/${reader.work.id}`} onClick={() => readerDialog.current?.close()}>↗ Página da obra</Link>{isOwner && <Link className="secondary-button reader-manage-link" href={`/works/${reader.work.id}/manage`} onClick={() => readerDialog.current?.close()}>⚙ Gerenciar obra</Link>}</div>
             </div>
 
             <article className="reader-content" style={{ '--reader-size': `${readerFont}px` } as CSSProperties}>
               <h1>{reader.work.title}</h1>
-              <div className="byline">por {reader.work.author_display_name} • {ratingLabel(reader.work.rating)} • {reader.work.tags.join(' · ')}</div>
+              <div className="byline">por <Link href={`/users/${encodeURIComponent(reader.work.author_username)}`} onClick={() => readerDialog.current?.close()}>{reader.work.author_display_name}</Link> • {ratingLabel(reader.work.rating)} • {reader.work.tags.join(' · ')}</div>
               {currentChapter ? (
                 <>
                   {currentChapter.title && <h2>{currentChapter.title}</h2>}

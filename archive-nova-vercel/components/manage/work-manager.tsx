@@ -299,7 +299,7 @@ export function WorkManager({ workId }: { workId: string }) {
     <main className="manage-page">
       <header className="manage-topbar">
         <Link className="publish-brand" href="/"><span>✦</span><strong>Archive Nova</strong></Link>
-        <div className="manage-breadcrumb"><span>Minhas obras</span><b>/</b><strong>{work.title}</strong></div>
+        <div className="manage-breadcrumb"><Link href="/dashboard">Creator Studio</Link><b>/</b><strong>{work.title}</strong></div>
         <div className="manage-top-actions"><Link href="/explore">Ver arquivo</Link><Link className="primary-button" href="/write">＋ Escrever</Link></div>
       </header>
 

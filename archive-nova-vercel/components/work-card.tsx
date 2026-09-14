@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import type { WorkCardData } from '@/lib/types'
 
 function ratingShort(rating: WorkCardData['rating']) {
@@ -48,7 +49,7 @@ export function WorkCard({
         <button className="open-work" type="button" aria-label={`Abrir ${work.title}`} onClick={() => onOpen(work.id)} />
       </div>
 
-      <p className="author">por {work.author_display_name || work.author_username}</p>
+      <p className="author">por <Link href={`/users/${encodeURIComponent(work.author_username)}`}>{work.author_display_name || work.author_username}</Link></p>
       <p className="summary">{work.summary || 'Sem resumo.'}</p>
 
       <div className="tags">

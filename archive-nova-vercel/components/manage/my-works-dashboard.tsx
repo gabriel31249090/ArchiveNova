@@ -46,7 +46,7 @@ export function MyWorksDashboard() {
 
   return (
     <main className="manage-page">
-      <header className="manage-topbar"><Link className="publish-brand" href="/"><span>✦</span><strong>Archive Nova</strong></Link><div className="manage-breadcrumb"><strong>Minhas obras</strong></div><div className="manage-top-actions"><Link href="/explore">Explorar</Link><Link className="primary-button" href="/write">＋ Nova obra</Link></div></header>
+      <header className="manage-topbar"><Link className="publish-brand" href="/"><span>✦</span><strong>Archive Nova</strong></Link><div className="manage-breadcrumb"><Link href="/dashboard">Creator Studio</Link><b>/</b><strong>Minhas obras</strong></div><div className="manage-top-actions"><Link href="/explore">Explorar</Link><Link className="primary-button" href="/write">＋ Nova obra</Link></div></header>
       <div className="my-works-shell">
         <div className="my-works-head"><div><p className="eyebrow">Painel do autor</p><h1>Minhas obras</h1><p>Edite informações, capítulos e configurações das histórias que você publicou.</p></div><Link className="primary-button large" href="/write">Começar uma história</Link></div>
         {works.length ? <div className="my-works-grid">{works.map((work) => (

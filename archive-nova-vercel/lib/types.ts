@@ -53,6 +53,7 @@ export interface WorkCardData {
   tags: string[]
   kudosed?: boolean
   bookmarked?: boolean
+  subscribed?: boolean
   total_count?: number
 }
 
@@ -99,4 +100,63 @@ export interface WorkFilters {
   includeTag: string
   excludeTag: string
   hideExplicit: boolean
+}
+
+export interface CreatorDashboardTotals {
+  works: number
+  published: number
+  ongoing: number
+  complete: number
+  drafts: number
+  words: number
+  hits: number
+  kudos: number
+  bookmarks: number
+  comments: number
+  followers: number
+  subscribers: number
+  unread_notifications: number
+}
+
+export interface CreatorRecentComment {
+  id: string
+  body: string
+  created_at: string
+  chapter_id: string
+  chapter_number: number
+  chapter_title: string | null
+  work_id: string
+  work_title: string
+  user_id: string
+  username: string
+  display_name: string
+}
+
+export interface NotificationItem {
+  id: string
+  type: 'KUDOS' | 'COMMENT' | 'COMMENT_REPLY' | 'NEW_FOLLOWER' | 'NEW_CHAPTER' | string
+  actor_user_id: string | null
+  work_id: string | null
+  comment_id: string | null
+  payload: Record<string, unknown>
+  read_at: string | null
+  created_at: string
+  actor_username: string | null
+  actor_display_name: string | null
+  work_title: string | null
+}
+
+export interface ModerationReport {
+  id: string
+  reason: string
+  details: string | null
+  status: 'OPEN' | 'REVIEWING' | 'RESOLVED' | 'DISMISSED'
+  created_at: string
+  resolved_at: string | null
+  work_id: string | null
+  comment_id: string | null
+  reporter_username: string | null
+  work_title: string | null
+  comment_body: string | null
+  comment_author_username: string | null
 }
