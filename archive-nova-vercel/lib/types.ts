@@ -55,6 +55,7 @@ export interface WorkCardData {
   bookmarked?: boolean
   subscribed?: boolean
   total_count?: number
+  allow_contributions?: boolean
 }
 
 export interface Chapter {
@@ -159,4 +160,108 @@ export interface ModerationReport {
   work_title: string | null
   comment_body: string | null
   comment_author_username: string | null
+}
+
+
+export interface CommunityPollOption {
+  id: string
+  text: string
+  position: number
+  votes: number
+}
+
+export interface CommunityPost {
+  id: string
+  author_id: string
+  author_username: string
+  author_display_name: string
+  body: string
+  image_urls: string[]
+  poll_question: string | null
+  visibility: 'PUBLIC' | 'FOLLOWERS'
+  comments_enabled: boolean
+  likes_count: number
+  comments_count: number
+  created_at: string
+  updated_at: string
+  liked: boolean
+  viewer_poll_option: string | null
+  poll_options: CommunityPollOption[]
+  rank_score?: number
+}
+
+export interface DiscoveryItem {
+  work: WorkCardData
+  reason: string
+}
+
+export interface SupportProfile {
+  enabled: boolean
+  message: string | null
+  pix_key: string | null
+  pix_receiver_name: string | null
+  pix_city: string | null
+  paypal_url: string | null
+  ko_fi_url: string | null
+  mercado_pago_url: string | null
+  other_label: string | null
+  other_url: string | null
+}
+
+export interface ContributionReview {
+  id: string
+  reviewer_id: string
+  username: string
+  display_name: string
+  verdict: 'COMMENT' | 'APPROVE' | 'REQUEST_CHANGES'
+  body: string
+  created_at: string
+}
+
+export interface WorkContribution {
+  id: string
+  contributor_id: string
+  username: string
+  display_name: string
+  type: 'NEW_CHAPTER' | 'CHAPTER_EDIT'
+  title: string
+  chapter_id: string | null
+  proposed_chapter_title: string | null
+  proposed_content: string
+  note: string | null
+  status: 'OPEN' | 'CHANGES_REQUESTED' | 'ACCEPTED' | 'REJECTED' | 'WITHDRAWN'
+  created_at: string
+  updated_at: string
+  merged_at: string | null
+  reviews: ContributionReview[]
+}
+
+export interface WorkCollaborator {
+  user_id: string
+  username: string
+  display_name: string
+  role: 'EDITOR' | 'REVIEWER'
+  status: 'PENDING' | 'ACCEPTED' | 'DECLINED'
+  created_at: string
+}
+
+export interface CollaborationHubPayload {
+  work: { id: string; title: string; creator_id: string; allow_contributions: boolean }
+  permissions: { is_owner: boolean; can_submit: boolean; can_review: boolean; can_merge: boolean }
+  chapters: Array<{ id: string; number: number; title: string | null }>
+  collaborators: WorkCollaborator[]
+  contributions: WorkContribution[]
+}
+
+export interface AdCampaign {
+  id: string
+  advertiser_name: string
+  title: string
+  body: string
+  image_url: string | null
+  target_url: string
+  placement: 'FEED' | 'EXPLORE' | 'READER' | 'SIDEBAR'
+  status: 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'ENDED'
+  impressions: number
+  clicks: number
 }

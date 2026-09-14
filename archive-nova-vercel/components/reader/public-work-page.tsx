@@ -10,7 +10,7 @@ import type { Chapter, CommentItem, WorkCardData, WorkDetail } from '@/lib/types
 
 function normalizeWork(row: Record<string, unknown>): WorkCardData {
   return {
-    id: String(row.id || ''), creator_id: String(row.creator_id || ''), title: String(row.title || ''), summary: String(row.summary || ''), rating: String(row.rating || 'NOT_RATED') as WorkCardData['rating'], status: String(row.status || 'ONGOING') as WorkCardData['status'], visibility: String(row.visibility || 'PUBLIC') as WorkCardData['visibility'], language: String(row.language || 'pt-BR'), expected_chapters: row.expected_chapters == null ? null : Number(row.expected_chapters), word_count: Number(row.word_count || 0), chapter_count: Number(row.chapter_count || 0), kudos_count: Number(row.kudos_count || 0), bookmarks_count: Number(row.bookmarks_count || 0), comments_count: Number(row.comments_count || 0), hits_count: Number(row.hits_count || 0), allow_comments: Boolean(row.allow_comments), published_at: row.published_at ? String(row.published_at) : null, updated_at: String(row.updated_at || ''), created_at: String(row.created_at || ''), author_username: String(row.author_username || ''), author_display_name: String(row.author_display_name || row.author_username || ''), fandoms: Array.isArray(row.fandoms) ? row.fandoms.map(String) : [], tags: Array.isArray(row.tags) ? row.tags.map(String) : [], kudosed: Boolean(row.kudosed), bookmarked: Boolean(row.bookmarked), subscribed: Boolean(row.subscribed),
+    id: String(row.id || ''), creator_id: String(row.creator_id || ''), title: String(row.title || ''), summary: String(row.summary || ''), rating: String(row.rating || 'NOT_RATED') as WorkCardData['rating'], status: String(row.status || 'ONGOING') as WorkCardData['status'], visibility: String(row.visibility || 'PUBLIC') as WorkCardData['visibility'], language: String(row.language || 'pt-BR'), expected_chapters: row.expected_chapters == null ? null : Number(row.expected_chapters), word_count: Number(row.word_count || 0), chapter_count: Number(row.chapter_count || 0), kudos_count: Number(row.kudos_count || 0), bookmarks_count: Number(row.bookmarks_count || 0), comments_count: Number(row.comments_count || 0), hits_count: Number(row.hits_count || 0), allow_comments: Boolean(row.allow_comments), published_at: row.published_at ? String(row.published_at) : null, updated_at: String(row.updated_at || ''), created_at: String(row.created_at || ''), author_username: String(row.author_username || ''), author_display_name: String(row.author_display_name || row.author_username || ''), fandoms: Array.isArray(row.fandoms) ? row.fandoms.map(String) : [], tags: Array.isArray(row.tags) ? row.tags.map(String) : [], kudosed: Boolean(row.kudosed), bookmarked: Boolean(row.bookmarked), subscribed: Boolean(row.subscribed), allow_contributions: Boolean(row.allow_contributions),
   }
 }
 
@@ -37,6 +37,7 @@ export function PublicWorkPage({ workId }: { workId: string }) {
   const [reportTarget, setReportTarget] = useState<{ type: 'work' | 'comment'; id: string; label: string } | null>(null)
   const [reportReason, setReportReason] = useState('HARASSMENT')
   const [reportDetails, setReportDetails] = useState('')
+  const [supportEnabled, setSupportEnabled] = useState(false)
 
   const currentChapter = detail?.chapters.find((chapter) => chapter.id === chapterId) || detail?.chapters[0] || null
   const isOwner = Boolean(user && detail?.work.creator_id === user.id)
@@ -55,6 +56,8 @@ export function PublicWorkPage({ workId }: { workId: string }) {
     const raw = data as { work: Record<string, unknown>; chapters: Record<string, unknown>[] }
     const next: WorkDetail = { work: normalizeWork(raw.work), chapters: (raw.chapters || []).map(normalizeChapter) }
     setDetail(next)
+    const supportResponse = await supabase.from('creator_support_profiles').select('enabled').eq('user_id', next.work.creator_id).eq('enabled', true).maybeSingle()
+    setSupportEnabled(Boolean(supportResponse.data?.enabled))
     setChapterId((current) => current && next.chapters.some((chapter) => chapter.id === current) ? current : next.chapters[0]?.id || '')
     setLoading(false)
   }, [supabase, workId])
@@ -174,6 +177,8 @@ export function PublicWorkPage({ workId }: { workId: string }) {
             <button className={`reader-social-button ${work.kudosed ? 'active' : ''}`} disabled={busy} onClick={toggleKudos}>{work.kudosed ? '♥ Kudos' : '♡ Dar kudos'}</button>
             <button className={`reader-social-button ${work.bookmarked ? 'active' : ''}`} disabled={busy} onClick={toggleBookmark}>{work.bookmarked ? '★ Salva' : '☆ Bookmark'}</button>
             {!isOwner ? <button className={`reader-social-button ${work.subscribed ? 'active' : ''}`} disabled={busy} onClick={toggleSubscription}>{work.subscribed ? '✓ Acompanhando' : '＋ Acompanhar'}</button> : <Link className="reader-social-button active" href={`/works/${work.id}/manage`}>⚙ Gerenciar</Link>}
+            {isOwner ? <Link className="reader-social-button" href={`/works/${work.id}/contribute`}>⑂ Contribuições</Link> : work.allow_contributions ? <Link className="reader-social-button" href={`/works/${work.id}/contribute`}>⑂ Contribuir</Link> : null}
+            {!isOwner && supportEnabled ? <Link className="reader-social-button support" href={`/support/${encodeURIComponent(work.author_username)}`}>♡ Apoiar autor</Link> : null}
             {!isOwner ? <button className="reader-social-button subtle" onClick={() => setReportTarget({ type: 'work', id: work.id, label: work.title })}>⋯ Denunciar</button> : null}
           </div>
         </section>

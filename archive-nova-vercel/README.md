@@ -1,4 +1,4 @@
-# Archive Nova v3.0.0 — Vercel + Supabase
+# Archive Nova v4.0.0 — Community & Creator Ecosystem
 
 Archive Nova é uma plataforma comunitária de histórias inspirada em arquivos como o AO3, com experiência própria de leitura, publicação, Creator Studio e Writer Pro sincronizado entre dispositivos.
 
@@ -124,6 +124,21 @@ http://localhost:3000
 6. Copie a URL final da Vercel para os Redirect URLs do Supabase.
 
 Não é necessário Docker, VPS, Java, Maven ou configurar um servidor separado.
+
+## Novidades da v4.0
+
+- Posts da comunidade inspirados em Community Posts, com texto, imagens, enquetes, curtidas, comentários e visibilidade pública/seguidores.
+- Feed de posts com modos recomendados, seguindo e recentes.
+- Feed de histórias com abas **Para você** e **Recém-publicadas**, sempre mostrando o motivo da recomendação.
+- Colaboração em obras no modelo de contribuições: proposta → revisão → aprovação/alterações → merge.
+- Convites de editor/revisor e calendário de contribuições no perfil inspirado no GitHub.
+- FAQ pesquisável, com painel de edição para moderadores e administradores.
+- Apoio ao escritor com PIX, QR Code, PIX Copia e Cola, PayPal, Ko-fi, Mercado Pago e link adicional.
+- Apoio direto ao projeto Archive Nova, configurável por moderadores/admins.
+- Publicidade nativa com selo **Patrocinado**, campanhas, solicitações, placements e métricas de impressão/clique.
+- Storage separado `post-media` para mídia dos posts.
+
+O Archive Nova não processa pagamentos de apoio: PIX e demais métodos levam o usuário diretamente ao recebedor/provedor externo.
 
 ## Funcionalidades já conectadas ao banco real
 

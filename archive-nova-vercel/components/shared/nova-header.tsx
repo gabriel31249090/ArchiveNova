@@ -61,9 +61,12 @@ export function NovaHeader({ title }: { title?: string }) {
         {title ? <div className="nova-header-context">{title}</div> : null}
         <nav className={`nova-header-nav ${menuOpen ? 'open' : ''}`} aria-label="Navegação">
           <Link href="/explore" onClick={() => setMenuOpen(false)}>Explorar</Link>
+          <Link href="/feed" onClick={() => setMenuOpen(false)}>Feed</Link>
+          <Link href="/posts" onClick={() => setMenuOpen(false)}>Posts</Link>
           {user ? <Link href="/dashboard" onClick={() => setMenuOpen(false)}>Studio</Link> : null}
           {user ? <Link className="nova-notification-link" href="/notifications" onClick={() => setMenuOpen(false)}>Notificações{unread > 0 ? <b>{unread > 99 ? '99+' : unread}</b> : null}</Link> : null}
           {profile?.role === 'MODERATOR' || profile?.role === 'ADMIN' ? <Link href="/moderation" onClick={() => setMenuOpen(false)}>Moderação</Link> : null}
+          <Link href="/faq" onClick={() => setMenuOpen(false)}>FAQ</Link>
           {user ? <Link href={profileHref} onClick={() => setMenuOpen(false)}>Perfil</Link> : null}
         </nav>
         <div className="nova-header-actions">
@@ -77,7 +80,7 @@ export function NovaHeader({ title }: { title?: string }) {
         </div>
       </header>
       <nav className="nova-mobile-dock" aria-label="Navegação móvel">
-        <Link className={pathname === '/explore' ? 'active' : ''} href="/explore"><span>⌕</span><small>Explorar</small></Link>
+        <Link className={pathname === '/feed' ? 'active' : ''} href="/feed"><span>✦</span><small>Feed</small></Link>
         <Link className={pathname?.startsWith('/dashboard') ? 'active' : ''} href={user ? '/dashboard' : `/explore?auth=login&return=${encodeURIComponent('/dashboard')}`}><span>◫</span><small>Studio</small></Link>
         <Link className="write" href="/write"><span>＋</span><small>Escrever</small></Link>
         <Link className={pathname?.startsWith('/notifications') ? 'active' : ''} href={user ? '/notifications' : `/explore?auth=login&return=${encodeURIComponent('/notifications')}`}><span>♢{unread > 0 ? <i /> : null}</span><small>Alertas</small></Link>

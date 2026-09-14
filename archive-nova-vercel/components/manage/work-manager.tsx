@@ -35,6 +35,7 @@ function normalizeWork(row: Record<string, unknown>): WorkCardData {
     author_display_name: String(row.author_display_name || row.author_username || ''),
     fandoms: Array.isArray(row.fandoms) ? row.fandoms.map(String) : [],
     tags: Array.isArray(row.tags) ? row.tags.map(String) : [],
+    allow_contributions: Boolean(row.allow_contributions),
   }
 }
 
@@ -300,7 +301,7 @@ export function WorkManager({ workId }: { workId: string }) {
       <header className="manage-topbar">
         <Link className="publish-brand" href="/"><span>✦</span><strong>Archive Nova</strong></Link>
         <div className="manage-breadcrumb"><Link href="/dashboard">Creator Studio</Link><b>/</b><strong>{work.title}</strong></div>
-        <div className="manage-top-actions"><Link href="/explore">Ver arquivo</Link><Link className="primary-button" href="/write">＋ Escrever</Link></div>
+        <div className="manage-top-actions"><Link href={`/works/${work.id}`}>Ver obra</Link><Link href={`/works/${work.id}/contribute`}>⑂ Colaboração</Link><Link className="primary-button" href="/write">＋ Escrever</Link></div>
       </header>
 
       <div className="manage-shell">
@@ -328,6 +329,7 @@ export function WorkManager({ workId }: { workId: string }) {
                 <label>Idioma<select value={language} onChange={(event) => setLanguage(event.target.value)}><option value="pt-BR">Português (Brasil)</option><option value="en">English</option><option value="es">Español</option></select></label>
                 <label className="manage-check"><input type="checkbox" checked={allowComments} onChange={(event) => setAllowComments(event.target.checked)} /><span><strong>Comentários</strong><small>Permitir comentários nos capítulos.</small></span></label>
               </div>
+              <div className="manage-card manage-collab-shortcut"><div><p className="eyebrow">Colaboração</p><h2>Contribuições da comunidade</h2><p>{work.allow_contributions ? 'Esta obra está aberta para propostas de capítulos e edições.' : 'As contribuições estão fechadas no momento.'}</p></div><Link className="secondary-button" href={`/works/${work.id}/contribute`}>Gerenciar contribuições →</Link></div>
               <div className="manage-card manage-taxonomy"><TaxonomyPicker kind="fandoms" label="Fandoms" values={fandoms} onChange={setFandoms} required placeholder="Adicionar fandom" /><TaxonomyPicker kind="tags" label="Tags" values={tags} onChange={setTags} placeholder="Adicionar tag" /></div>
             </div>
           ) : null}
