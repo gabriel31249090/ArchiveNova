@@ -870,6 +870,37 @@ drop policy if exists notification_preferences_self_all on public.notification_p
 create policy notification_preferences_self_all on public.notification_preferences for all to authenticated
   using(user_id=auth.uid()) with check(user_id=auth.uid());
 
+create or replace function public.filter_notification_preferences()
+returns trigger
+language plpgsql
+security definer
+set search_path=public,pg_temp
+as $
+declare allowed boolean;
+begin
+  select case
+    when new.type='KUDOS' then np.kudos
+    when new.type='COMMENT' then np.comments
+    when new.type='COMMENT_REPLY' then np.replies
+    when new.type='NEW_FOLLOWER' then np.follows
+    when new.type='NEW_CHAPTER' then np.chapters
+    when new.type like '%CONTRIB%' or new.type like '%COLLAB%' or new.type='DRAFT_COLLAB_INVITE' then np.collaborations
+    when new.type like '%MODERAT%' or new.type like '%REPORT%' then np.moderation
+    else true
+  end into allowed
+  from public.notification_preferences np
+  where np.user_id=new.user_id;
+
+  if coalesce(allowed,true)=false then return null; end if;
+  return new;
+end;
+$;
+
+drop trigger if exists notifications_respect_preferences on public.notifications;
+create trigger notifications_respect_preferences
+  before insert on public.notifications
+  for each row execute procedure public.filter_notification_preferences();
+
 -- -----------------------------------------------------------------------------
 -- Chapter analytics / retention
 -- -----------------------------------------------------------------------------
@@ -950,6 +981,16 @@ create table if not exists public.draft_inline_comments (
 
 alter table public.draft_collaborators enable row level security;
 alter table public.draft_inline_comments enable row level security;
+
+do $
+begin
+  begin
+    alter publication supabase_realtime add table public.draft_inline_comments;
+  exception when duplicate_object then null;
+           when undefined_object then raise notice 'supabase_realtime publication is not available';
+           when insufficient_privilege then raise notice 'Could not add draft comments to realtime publication';
+  end;
+end $;
 
 create or replace function public.can_edit_draft(target_draft uuid)
 returns boolean
