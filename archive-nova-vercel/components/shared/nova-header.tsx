@@ -67,6 +67,8 @@ export function NovaHeader({ title }: { title?: string }) {
           <Link href="/explore" onClick={() => setMenuOpen(false)}>Explorar</Link>
           <Link href="/feed" onClick={() => setMenuOpen(false)}>Feed</Link>
           <Link href="/posts" onClick={() => setMenuOpen(false)}>Posts</Link>
+          {user ? <Link href="/library" onClick={() => setMenuOpen(false)}>Biblioteca</Link> : null}
+          {user ? <Link href="/collaboration" onClick={() => setMenuOpen(false)}>Colaboração</Link> : null}
           {user ? <Link href="/dashboard" onClick={() => setMenuOpen(false)}>Studio</Link> : null}
           {user ? <Link className="nova-notification-link" href="/notifications" onClick={() => setMenuOpen(false)}>Notificações{unread > 0 ? <b>{unread > 99 ? '99+' : unread}</b> : null}</Link> : null}
           {profile?.role === 'MODERATOR' || profile?.role === 'ADMIN' ? <Link href="/moderation" onClick={() => setMenuOpen(false)}>Moderação</Link> : null}
