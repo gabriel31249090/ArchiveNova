@@ -684,12 +684,15 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
           </Link>
 
           <nav className="nav-stack">
-            <Link className="nav-item" href="/"><span>⌂</span> Início</Link>
+            <Link className={`nav-item ${view === 'home' ? 'active' : ''}`} href="/home"><span>⌂</span> Início</Link>
             <button className={`nav-item ${view === 'explore' ? 'active' : ''}`} onClick={() => changeView('explore')}><span>⌕</span> Explorar</button>
+            <Link className="nav-item" href="/feed"><span>✦</span> Feed</Link>
+            <Link className="nav-item" href="/posts"><span>☁</span> Posts</Link>
             <button className={`nav-item ${view === 'library' ? 'active' : ''}`} onClick={() => changeView('library')}><span>♡</span> Minha biblioteca</button>
             <button className={`nav-item ${view === 'history' ? 'active' : ''}`} onClick={() => changeView('history')}><span>↺</span> Histórico</button>
             <Link className="nav-item" href="/dashboard"><span>◫</span> Creator Studio</Link>
             <Link className="nav-item" href="/notifications"><span>♢</span> Notificações</Link>
+            <Link className="nav-item" href="/faq"><span>?</span> FAQ</Link>
           </nav>
 
           <div className="sidebar-section">
@@ -735,34 +738,49 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
             <button className="primary-button" onClick={() => { window.location.href = '/write' }}>＋ Escrever</button>
           </header>
 
-          <section className={`view ${view === 'home' ? 'active' : ''}`}>
-            <section className="hero">
-              <div className="hero-copy">
-                <span className="pill soft">Arquivo comunitário independente</span>
-                <h1>Encontre uma história que pareça ter sido escrita <em>para você.</em></h1>
-                <p>Busca detalhada, tags legíveis, leitura confortável e uma biblioteca organizada. Todo conteúdo mostrado aqui vem do banco de dados do próprio Archive Nova.</p>
-                <div className="hero-actions">
+          <section className={`view home-v4 ${view === 'home' ? 'active' : ''}`}>
+            <section className="home-v4-hero">
+              <div className="home-v4-hero-copy">
+                <div className="home-v4-kicker"><span>✦</span> Seu arquivo começa aqui</div>
+                <h1>Leia, descubra e participe do <em>Archive Nova.</em></h1>
+                <p>Histórias recentes, recomendações transparentes, posts da comunidade e ferramentas para quem escreve — tudo conectado ao seu arquivo pessoal.</p>
+                <div className="home-v4-actions">
                   <button className="primary-button large" onClick={() => changeView('explore')}>Explorar histórias</button>
-                  <button className="ghost-button large" onClick={randomWork}>Obra aleatória</button>
+                  <Link className="secondary-button large" href="/feed">Abrir meu feed</Link>
+                  <button className="ghost-button large" onClick={randomWork}>Surpreenda-me</button>
+                </div>
+                <div className="home-v4-pulse">
+                  <span><i /> {fullNumber(stats.works)} obras</span>
+                  <span>{fullNumber(stats.fandoms)} fandoms</span>
+                  <span>{compactNumber(stats.words)} palavras</span>
                 </div>
               </div>
-              <div className="hero-card" aria-label="Resumo da plataforma">
-                <div className="stat"><strong>{fullNumber(stats.works)}</strong><span>obras públicas</span></div>
-                <div className="stat"><strong>{fullNumber(stats.fandoms)}</strong><span>fandoms</span></div>
-                <div className="stat"><strong>{fullNumber(stats.users)}</strong><span>contas ativas</span></div>
-                <div className="hero-note">{fullNumber(stats.words)} palavras publicadas no arquivo.</div>
+
+              <div className="home-v4-spotlight" aria-label="Resumo da plataforma">
+                <div className="home-v4-spotlight-head"><span>AGORA NO ARQUIVO</span><b>✦</b></div>
+                <div className="home-v4-spotlight-stat"><strong>{fullNumber(stats.users)}</strong><span>contas na comunidade</span></div>
+                <div className="home-v4-spotlight-stat"><strong>{fullNumber(stats.works)}</strong><span>obras públicas</span></div>
+                <div className="home-v4-spotlight-line"><i /><span>Arquivo vivo, sem ranking secreto.</span></div>
               </div>
             </section>
 
-            <section className="section-block">
+            <section className="home-v4-shortcuts" aria-label="Atalhos do Archive Nova">
+              <Link href="/feed"><span>✦</span><div><strong>Para você</strong><small>Recomendações explicadas</small></div><b>→</b></Link>
+              <Link href="/posts"><span>☁</span><div><strong>Comunidade</strong><small>Posts, enquetes e conversas</small></div><b>→</b></Link>
+              <Link href="/write"><span>✎</span><div><strong>Continuar escrevendo</strong><small>Writer Cloud e autosave</small></div><b>→</b></Link>
+              <Link href="/dashboard"><span>◫</span><div><strong>Creator Studio</strong><small>Obras, drafts e métricas</small></div><b>→</b></Link>
+            </section>
+
+            <section className="section-block home-v4-section">
               <div className="section-heading">
-                <div><p className="eyebrow">Descoberta</p><h2>Fandoms mais ativos</h2></div>
-                <button className="text-button" onClick={() => changeView('explore')}>Explorar obras →</button>
+                <div><p className="eyebrow">Descoberta</p><h2>Fandoms em movimento</h2><p className="home-v4-section-copy">Entre pelo universo que você já conhece ou encontre um novo canto do arquivo.</p></div>
+                <button className="text-button" onClick={() => changeView('explore')}>Ver tudo →</button>
               </div>
               {fandoms.length ? (
-                <div className="category-grid">
-                  {fandoms.slice(0, 8).map((fandom) => (
+                <div className="category-grid home-v4-fandoms">
+                  {fandoms.slice(0, 8).map((fandom, index) => (
                     <button className="category-card" key={fandom.id} onClick={() => chooseFandom(fandom)}>
+                      <span className="home-v4-fandom-index">{String(index + 1).padStart(2, '0')}</span>
                       <span className="category-icon">✦</span>
                       <strong>{fandom.name}</strong>
                       <span>{fullNumber(fandom.work_count)} obras · {compactNumber(fandom.total_words)} palavras</span>
@@ -770,13 +788,13 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
                   ))}
                 </div>
               ) : (
-                <div className="empty-state centered compact-empty"><span>✦</span><h2>O arquivo ainda está vazio</h2><p>O primeiro fandom aparecerá aqui assim que uma obra for publicada.</p></div>
+                <div className="empty-state centered compact-empty"><span>✦</span><h2>O arquivo ainda está crescendo</h2><p>Os fandoms aparecem aqui conforme novas obras são publicadas.</p></div>
               )}
             </section>
 
-            <section className="section-block">
+            <section className="section-block home-v4-section">
               <div className="section-heading">
-                <div><p className="eyebrow">Acervo</p><h2>Obras</h2></div>
+                <div><p className="eyebrow">Sua próxima leitura</p><h2>Do arquivo para você</h2><p className="home-v4-section-copy">Alterne entre tendências, novidades e histórias longas sem perder o controle da descoberta.</p></div>
                 <div className="segmented" role="group" aria-label="Ordenar obras">
                   {(['hot', 'recent', 'long'] as SortMode[]).map((mode) => (
                     <button key={mode} className={sortMode === mode ? 'active' : ''} onClick={() => setSortMode(mode)}>
@@ -786,10 +804,24 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
                 </div>
               </div>
               {featured.length ? (
-                <div className="work-grid">{featured.map((work) => <WorkCard key={work.id} work={work} onOpen={openWork} onBookmark={toggleBookmark} />)}</div>
+                <div className="work-grid home-v4-work-grid">{featured.map((work) => <WorkCard key={work.id} work={work} onOpen={openWork} onBookmark={toggleBookmark} />)}</div>
               ) : (
-                <div className="empty-state centered compact-empty"><span>⌁</span><h2>Nenhuma obra publicada</h2><p>Cadastre-se e publique a primeira obra do arquivo.</p></div>
+                <div className="empty-state centered compact-empty"><span>⌁</span><h2>Nenhuma obra publicada ainda</h2><p>Quando a primeira história chegar, ela aparecerá aqui.</p></div>
               )}
+            </section>
+
+            <section className="home-v4-bottom-grid">
+              <Link href="/posts" className="home-v4-community-card">
+                <p className="eyebrow">Comunidade</p>
+                <h2>O arquivo também conversa.</h2>
+                <p>Acompanhe atualizações de escritores, vote em enquetes e participe das discussões.</p>
+                <span>Ir para Posts →</span>
+              </Link>
+              <Link href="/faq" className="home-v4-help-card">
+                <span>?</span>
+                <div><strong>Precisa de ajuda?</strong><p>Veja como publicar, colaborar, apoiar autores e usar os recursos do Archive Nova.</p></div>
+                <b>FAQ →</b>
+              </Link>
             </section>
           </section>
 

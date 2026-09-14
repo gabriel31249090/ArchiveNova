@@ -4,8 +4,18 @@ import './globals.css'
 import './community-v4.css'
 
 export const metadata: Metadata = {
-  title: 'Archive Nova — Histórias sem algoritmo',
-  description: 'Leia, escreva e arquive histórias com busca detalhada, fandoms, tags e uma biblioteca feita para leitores e escritores.',
+  title: {
+    default: 'Archive Nova — Histórias sem algoritmo',
+    template: '%s | Archive Nova',
+  },
+  description: 'Leia, escreva, publique e colabore em um arquivo comunitário com busca detalhada, Writer Cloud, posts, feed transparente e ferramentas para autores.',
+  keywords: ['fanfic', 'histórias', 'arquivo', 'escrita', 'fandom', 'Archive Nova'],
+  openGraph: {
+    title: 'Archive Nova — Histórias sem algoritmo',
+    description: 'Um arquivo comunitário para ler, escrever, publicar e colaborar em histórias.',
+    type: 'website',
+    locale: 'pt_BR',
+  },
 }
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
