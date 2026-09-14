@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { absoluteUrl } from '@/lib/site'
-import { getPublicProfileSitemapEntries, getPublicWorkSitemapEntries } from '@/lib/seo-public'
+import { getPublicListSitemapEntries, getPublicProfileSitemapEntries, getPublicTaxonomySitemapEntries, getPublicWorkSitemapEntries } from '@/lib/seo-public'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,24 +14,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: absoluteUrl('/support'), lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { url: absoluteUrl('/advertise'), lastModified: now, changeFrequency: 'monthly', priority: 0.4 },
   ]
-
-  const [works, profiles] = await Promise.all([
-    getPublicWorkSitemapEntries(),
-    getPublicProfileSitemapEntries(),
+  const [works,profiles,taxonomies,lists]=await Promise.all([
+    getPublicWorkSitemapEntries(),getPublicProfileSitemapEntries(),getPublicTaxonomySitemapEntries(),getPublicListSitemapEntries(),
   ])
-  const workRoutes: MetadataRoute.Sitemap = works.map((work) => ({
-    url: absoluteUrl(`/works/${encodeURIComponent(work.id)}`),
-    lastModified: work.updatedAt ? new Date(work.updatedAt) : now,
-    changeFrequency: 'weekly',
-    priority: 0.8,
-  }))
-
-  const profileRoutes: MetadataRoute.Sitemap = profiles.map((profile) => ({
-    url: absoluteUrl(`/users/${encodeURIComponent(profile.username)}`),
-    lastModified: profile.updatedAt ? new Date(profile.updatedAt) : now,
-    changeFrequency: 'weekly',
-    priority: 0.6,
-  }))
-
-  return [...staticRoutes, ...workRoutes, ...profileRoutes]
+  const workRoutes:MetadataRoute.Sitemap=works.map(work=>({url:absoluteUrl('/works/'+encodeURIComponent(work.id)),lastModified:work.updatedAt?new Date(work.updatedAt):now,changeFrequency:'weekly',priority:0.8}))
+  const profileRoutes:MetadataRoute.Sitemap=profiles.map(profile=>({url:absoluteUrl('/users/'+encodeURIComponent(profile.username)),lastModified:profile.updatedAt?new Date(profile.updatedAt):now,changeFrequency:'weekly',priority:0.6}))
+  const taxonomyRoutes:MetadataRoute.Sitemap=taxonomies.map(item=>{
+    const base=item.kind==='FANDOM'?'fandoms':item.kind==='CHARACTER'?'characters':item.kind==='RELATIONSHIP'?'relationships':'tags'
+    return {url:absoluteUrl('/'+base+'/'+encodeURIComponent(item.slug)),lastModified:item.updatedAt?new Date(item.updatedAt):now,changeFrequency:'weekly',priority:0.65}
+  })
+  const listRoutes:MetadataRoute.Sitemap=lists.map(item=>({url:absoluteUrl('/'+item.kind+'/'+encodeURIComponent(item.id)),lastModified:item.updatedAt?new Date(item.updatedAt):now,changeFrequency:'weekly',priority:0.55}))
+  return [...staticRoutes,...workRoutes,...profileRoutes,...taxonomyRoutes,...listRoutes]
 }
