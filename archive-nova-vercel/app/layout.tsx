@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import './globals.css'
+import './community-v4.css'
 
 export const metadata: Metadata = {
   title: 'Archive Nova — Histórias sem algoritmo',
