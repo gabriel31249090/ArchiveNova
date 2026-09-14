@@ -10,8 +10,10 @@ import {
   EditorToolbar,
   FindReplacePanel,
   ImportDialog,
+  setLink,
   type ImportMode,
   type ImportResult,
+  type TiptapEditor,
 } from '@/components/editor/editor-shared-ui'
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
