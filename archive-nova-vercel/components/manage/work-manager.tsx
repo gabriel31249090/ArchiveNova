@@ -53,6 +53,7 @@ function normalizeChapter(row: Record<string, unknown>): Chapter {
     word_count: Number(row.word_count || 0),
     status: String(row.status || 'PUBLISHED') as Chapter['status'],
     published_at: row.published_at == null ? null : String(row.published_at),
+    scheduled_for: row.scheduled_for == null ? null : String(row.scheduled_for),
     created_at: String(row.created_at || ''),
     updated_at: String(row.updated_at || ''),
   }
@@ -314,7 +315,7 @@ export function WorkManager({ workId }: { workId: string }) {
       <header className="manage-topbar">
         <Link className="publish-brand" href="/"><span>✦</span><strong>Archive Nova</strong></Link>
         <div className="manage-breadcrumb"><Link href="/dashboard">Creator Studio</Link><b>/</b><strong>{work.title}</strong></div>
-        <div className="manage-top-actions"><Link href={`/works/${work.id}`}>Ver obra</Link><Link className="nova-inline-icon" href={`/works/${work.id}/contribute`}><NovaIcon name="branch" size={16} />Colaboração</Link><Link className="primary-button nova-button-with-icon" href="/write"><NovaIcon name="write" size={16} />Escrever</Link></div>
+        <div className="manage-top-actions"><Link href={`/works/${work.id}`}>Ver obra</Link><Link href={`/works/${work.id}/versions`}>Versões</Link><Link href={`/works/${work.id}/schedule`}>Agendar</Link><Link href={`/works/${work.id}/export`}>Exportar</Link><Link className="nova-inline-icon" href={`/works/${work.id}/contribute`}><NovaIcon name="branch" size={16} />Colaboração</Link><Link className="primary-button nova-button-with-icon" href="/write"><NovaIcon name="write" size={16} />Escrever</Link></div>
       </header>
 
       <div className="manage-shell">
