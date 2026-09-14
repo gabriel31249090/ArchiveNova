@@ -104,12 +104,14 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
   const [library, setLibrary] = useState<WorkCardData[]>([])
   const [history, setHistory] = useState<WorkCardData[]>([])
   const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
   const [filters, setFilters] = useState<WorkFilters>(EMPTY_FILTERS)
   const [sortMode, setSortMode] = useState<SortMode>('recent')
   const [layout, setLayout] = useState<LayoutMode>('grid')
   const [page, setPage] = useState(0)
   const [resultTotal, setResultTotal] = useState(0)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [resultsLoading, setResultsLoading] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [reader, setReader] = useState<WorkDetail | null>(null)
   const [currentChapterId, setCurrentChapterId] = useState<string | null>(null)
@@ -176,7 +178,7 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
   }, [supabase])
 
   const runWorkSearch = useCallback(async ({
-    search = query,
+    search = debouncedQuery,
     filterState = filters,
     sort = sortMode,
     requestedPage = page,
@@ -208,7 +210,7 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
     const works = ((data || []) as Record<string, unknown>[]).map(normalizeWork)
     const total = works[0]?.total_count || 0
     return { works, total }
-  }, [supabase, query, filters, sortMode, page])
+  }, [supabase, debouncedQuery, filters, sortMode, page])
 
   const loadFeatured = useCallback(async () => {
     try {
@@ -220,6 +222,7 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
   }, [runWorkSearch, sortMode])
 
   const loadResults = useCallback(async () => {
+    setResultsLoading(true)
     try {
       const { works, total } = await runWorkSearch()
       setResults(works)
@@ -227,6 +230,8 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
     } catch (error) {
       console.error(error)
       notify('Não foi possível carregar as obras.')
+    } finally {
+      setResultsLoading(false)
     }
   }, [runWorkSearch, notify])
 
@@ -300,6 +305,11 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
   }, [supabase, loadProfile])
 
   useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedQuery(query.trim()), 260)
+    return () => window.clearTimeout(timer)
+  }, [query])
+
+  useEffect(() => {
     if (!supabase) return
     void loadStatsAndFandoms()
   }, [supabase, loadStatsAndFandoms])
@@ -313,7 +323,7 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
     if (view === 'explore') void loadResults()
     if (view === 'library' && profile) void loadLibrary()
     if (view === 'history' && profile) void loadHistory()
-  }, [view, profile, loadResults, loadLibrary, loadHistory, page, filters, query])
+  }, [view, profile, loadResults, loadLibrary, loadHistory, page, filters, debouncedQuery])
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -361,6 +371,7 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
   function clearFilters() {
     setFilters(EMPTY_FILTERS)
     setQuery('')
+    setDebouncedQuery('')
     setPage(0)
   }
 
@@ -616,6 +627,42 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
     setPage(0)
   }
 
+  function updateSort(mode: SortMode) {
+    setSortMode(mode)
+    setPage(0)
+  }
+
+  function clearSingleFilter(key: keyof WorkFilters) {
+    if (key === 'hideExplicit') updateFilter(key, false)
+    else updateFilter(key, '' as WorkFilters[typeof key])
+  }
+
+  const activeFilterCount = useMemo(() => {
+    return [
+      filters.fandom,
+      filters.rating,
+      filters.status,
+      filters.minWords,
+      filters.includeTag,
+      filters.excludeTag,
+      filters.hideExplicit ? '1' : '',
+    ].filter(Boolean).length
+  }, [filters])
+
+  const fandomLabel = filters.fandom
+    ? fandoms.find((fandom) => fandom.slug === filters.fandom || fandom.name === filters.fandom)?.name || filters.fandom
+    : ''
+
+  const ratingLabels: Record<string, string> = {
+    GENERAL: 'Livre',
+    TEEN: 'Teen',
+    MATURE: 'Mature',
+    EXPLICIT: 'Explicit',
+    NOT_RATED: 'Não classificada',
+  }
+
+  const statusLabels: Record<string, string> = { COMPLETE: 'Concluída', ONGOING: 'Em andamento', HIATUS: 'Hiato' }
+
   const chapterParagraphs = currentChapter?.content.split(/\n\s*\n/).filter(Boolean) || []
   const totalPages = Math.max(1, Math.ceil(resultTotal / PAGE_SIZE))
   const isOwner = Boolean(profile && reader && reader.work.creator_id === profile.id)
@@ -683,7 +730,7 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
               />
               <kbd>Ctrl K</kbd>
             </div>
-            <button className="secondary-button" onClick={() => { setView('explore'); setFiltersOpen((value) => !value) }}>Filtros</button>
+            <button className="secondary-button" onClick={() => { setView('explore'); setFiltersOpen((value) => !value) }}>Filtros{activeFilterCount ? ` (${activeFilterCount})` : ''}</button>
             <button className="primary-button" onClick={() => { window.location.href = '/write' }}>＋ Escrever</button>
           </header>
 
@@ -745,50 +792,158 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
             </section>
           </section>
 
-          <section className={`view ${view === 'explore' ? 'active' : ''}`}>
-            <div className="page-header">
-              <div><p className="eyebrow">Busca avançada</p><h1>Explorar obras</h1><p>{fullNumber(resultTotal)} resultados</p></div>
-              <div className="view-tools">
-                <button className={`icon-button ${layout === 'grid' ? 'active' : ''}`} onClick={() => setLayout('grid')} aria-label="Grade">▦</button>
-                <button className={`icon-button ${layout === 'list' ? 'active' : ''}`} onClick={() => setLayout('list')} aria-label="Lista">☷</button>
+          <section className={`view explore-view ${view === 'explore' ? 'active' : ''}`}>
+            <div className="explore-hero-v4">
+              <div className="explore-title-row">
+                <div>
+                  <p className="eyebrow">Descoberta</p>
+                  <h1>Encontre sua próxima história.</h1>
+                  <p>Pesquise por título, autor, fandom ou tag e refine sem transformar a busca em um formulário gigante.</p>
+                </div>
+                <div className="explore-result-badge" aria-live="polite">
+                  <strong>{resultsLoading ? '…' : fullNumber(resultTotal)}</strong>
+                  <span>{resultTotal === 1 ? 'obra encontrada' : 'obras encontradas'}</span>
+                </div>
+              </div>
+
+              <div className="explore-search-box">
+                <span className="explore-search-icon" aria-hidden="true">⌕</span>
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(event) => { setQuery(event.target.value); setPage(0) }}
+                  placeholder="Busque uma obra, autor, fandom ou tag…"
+                  autoComplete="off"
+                  aria-label="Buscar no acervo"
+                />
+                {query ? <button type="button" className="explore-search-clear" onClick={() => { setQuery(''); setDebouncedQuery(''); setPage(0) }} aria-label="Limpar busca">×</button> : <span className="explore-search-hint">Ctrl K</span>}
+              </div>
+
+              <div className="explore-quick-row" aria-label="Filtros rápidos">
+                <button className={!filters.status && !filters.minWords ? 'active' : ''} onClick={() => { updateFilter('status', ''); updateFilter('minWords', '') }}>Todas</button>
+                <button className={filters.status === 'COMPLETE' ? 'active' : ''} onClick={() => updateFilter('status', filters.status === 'COMPLETE' ? '' : 'COMPLETE')}>✓ Concluídas</button>
+                <button className={filters.status === 'ONGOING' ? 'active' : ''} onClick={() => updateFilter('status', filters.status === 'ONGOING' ? '' : 'ONGOING')}>↗ Em andamento</button>
+                <button className={filters.minWords === '50000' ? 'active' : ''} onClick={() => updateFilter('minWords', filters.minWords === '50000' ? '' : '50000')}>50 mil+ palavras</button>
+                <button className={filters.hideExplicit ? 'active' : ''} onClick={() => updateFilter('hideExplicit', !filters.hideExplicit)}>Sem Explicit</button>
               </div>
             </div>
-            <div className="explore-layout">
-              <aside className={`filters-panel ${filtersOpen ? 'open' : ''}`}>
-                <div className="filter-head"><strong>Filtros</strong><button className="text-button" onClick={clearFilters}>Limpar</button></div>
-                <label>Fandom
-                  <select value={filters.fandom} onChange={(event) => updateFilter('fandom', event.target.value)}>
-                    <option value="">Todos</option>
-                    {fandoms.map((fandom) => <option key={fandom.id} value={fandom.slug}>{fandom.name}</option>)}
+
+            <div className="explore-toolbar-v4">
+              <div className="explore-toolbar-left">
+                <button className={`filter-trigger ${filtersOpen ? 'active' : ''}`} onClick={() => setFiltersOpen((value) => !value)}>
+                  <span>☷</span> Filtros {activeFilterCount > 0 && <b>{activeFilterCount}</b>}
+                </button>
+                <div className="sort-control">
+                  <span>Ordenar</span>
+                  <select value={sortMode} onChange={(event) => updateSort(event.target.value as SortMode)} aria-label="Ordenar resultados">
+                    <option value="recent">Mais recentes</option>
+                    <option value="hot">Em alta</option>
+                    <option value="long">Mais longas</option>
                   </select>
+                </div>
+              </div>
+              <div className="view-tools explore-view-tools">
+                <button className={`icon-button ${layout === 'grid' ? 'active' : ''}`} onClick={() => setLayout('grid')} aria-label="Visualização em grade">▦</button>
+                <button className={`icon-button ${layout === 'list' ? 'active' : ''}`} onClick={() => setLayout('list')} aria-label="Visualização em lista">☷</button>
+              </div>
+            </div>
+
+            {(activeFilterCount > 0 || debouncedQuery) && (
+              <div className="active-filter-bar">
+                <span className="active-filter-label">Ativos</span>
+                {debouncedQuery && <button onClick={() => { setQuery(''); setDebouncedQuery(''); setPage(0) }}>Busca: “{debouncedQuery}” <span>×</span></button>}
+                {filters.fandom && <button onClick={() => clearSingleFilter('fandom')}>Fandom: {fandomLabel} <span>×</span></button>}
+                {filters.rating && <button onClick={() => clearSingleFilter('rating')}>{ratingLabels[filters.rating] || filters.rating} <span>×</span></button>}
+                {filters.status && <button onClick={() => clearSingleFilter('status')}>{statusLabels[filters.status] || filters.status} <span>×</span></button>}
+                {filters.minWords && <button onClick={() => clearSingleFilter('minWords')}>{fullNumber(Number(filters.minWords))}+ palavras <span>×</span></button>}
+                {filters.includeTag && <button onClick={() => clearSingleFilter('includeTag')}>Tag: {filters.includeTag} <span>×</span></button>}
+                {filters.excludeTag && <button onClick={() => clearSingleFilter('excludeTag')}>Excluir: {filters.excludeTag} <span>×</span></button>}
+                {filters.hideExplicit && <button onClick={() => clearSingleFilter('hideExplicit')}>Sem Explicit <span>×</span></button>}
+                <button className="clear-filter-chip" onClick={clearFilters}>Limpar tudo</button>
+              </div>
+            )}
+
+            <div className={`explore-layout-v4 ${filtersOpen ? 'filters-visible' : ''}`}>
+              {filtersOpen && <button className="filters-backdrop" aria-label="Fechar filtros" onClick={() => setFiltersOpen(false)} />}
+              <aside className={`filters-panel-v4 ${filtersOpen ? 'open' : ''}`} aria-label="Filtros de busca">
+                <div className="filters-v4-head">
+                  <div><p className="eyebrow">Refinar</p><h2>Filtros</h2></div>
+                  <div className="filters-v4-head-actions"><button className="text-button" onClick={clearFilters}>Limpar</button><button className="filter-close" onClick={() => setFiltersOpen(false)} aria-label="Fechar filtros">×</button></div>
+                </div>
+
+                <div className="filter-group-v4">
+                  <div className="filter-group-title"><strong>Fandom</strong><span>{fandomLabel || 'Todos'}</span></div>
+                  <div className="filter-choice-list fandom-choice-list">
+                    <button className={!filters.fandom ? 'active' : ''} onClick={() => updateFilter('fandom', '')}>Todos</button>
+                    {fandoms.slice(0, 10).map((fandom) => <button key={fandom.id} className={filters.fandom === fandom.slug ? 'active' : ''} onClick={() => updateFilter('fandom', filters.fandom === fandom.slug ? '' : fandom.slug)}>{fandom.name}<small>{fullNumber(fandom.work_count)}</small></button>)}
+                  </div>
+                </div>
+
+                <div className="filter-group-v4">
+                  <div className="filter-group-title"><strong>Classificação</strong><span>{filters.rating ? ratingLabels[filters.rating] : 'Todas'}</span></div>
+                  <div className="rating-filter-grid">
+                    {[['GENERAL','G','Livre'],['TEEN','T','Teen'],['MATURE','M','Mature'],['EXPLICIT','E','Explicit'],['NOT_RATED','?','Não classificada']].map(([value, short, label]) => (
+                      <button key={value} className={filters.rating === value ? 'active' : ''} onClick={() => updateFilter('rating', filters.rating === value ? '' : value)}><b>{short}</b><span>{label}</span></button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="filter-group-v4">
+                  <div className="filter-group-title"><strong>Status</strong><span>{filters.status ? statusLabels[filters.status] : 'Todos'}</span></div>
+                  <div className="filter-choice-list compact">
+                    <button className={!filters.status ? 'active' : ''} onClick={() => updateFilter('status', '')}>Todos</button>
+                    <button className={filters.status === 'ONGOING' ? 'active' : ''} onClick={() => updateFilter('status', filters.status === 'ONGOING' ? '' : 'ONGOING')}>Em andamento</button>
+                    <button className={filters.status === 'COMPLETE' ? 'active' : ''} onClick={() => updateFilter('status', filters.status === 'COMPLETE' ? '' : 'COMPLETE')}>Concluída</button>
+                    <button className={filters.status === 'HIATUS' ? 'active' : ''} onClick={() => updateFilter('status', filters.status === 'HIATUS' ? '' : 'HIATUS')}>Hiato</button>
+                  </div>
+                </div>
+
+                <div className="filter-group-v4">
+                  <div className="filter-group-title"><strong>Tamanho mínimo</strong><span>{filters.minWords ? `${fullNumber(Number(filters.minWords))}+` : 'Qualquer'}</span></div>
+                  <div className="word-presets">
+                    {[['','Qualquer'],['1000','1k+'],['10000','10k+'],['50000','50k+'],['100000','100k+']].map(([value, label]) => <button key={label} className={filters.minWords === value ? 'active' : ''} onClick={() => updateFilter('minWords', value)}>{label}</button>)}
+                  </div>
+                  <label className="filter-input-label">Ou digite o mínimo
+                    <input type="number" min="0" step="1000" value={filters.minWords} onChange={(event) => updateFilter('minWords', event.target.value)} placeholder="Ex.: 25000" />
+                  </label>
+                </div>
+
+                <div className="filter-group-v4">
+                  <div className="filter-group-title"><strong>Tags</strong><span>Inclua ou evite</span></div>
+                  <label className="filter-input-label">Incluir tag
+                    <input value={filters.includeTag} onChange={(event) => updateFilter('includeTag', event.target.value)} placeholder="Ex.: Slow Burn" />
+                  </label>
+                  <label className="filter-input-label">Excluir tag
+                    <input value={filters.excludeTag} onChange={(event) => updateFilter('excludeTag', event.target.value)} placeholder="Ex.: Major Character Death" />
+                  </label>
+                </div>
+
+                <label className="explicit-toggle-v4">
+                  <span><strong>Ocultar Explicit</strong><small>Remove obras classificadas como conteúdo explícito.</small></span>
+                  <input type="checkbox" checked={filters.hideExplicit} onChange={(event) => updateFilter('hideExplicit', event.target.checked)} />
+                  <i aria-hidden="true" />
                 </label>
-                <label>Classificação
-                  <select value={filters.rating} onChange={(event) => updateFilter('rating', event.target.value)}>
-                    <option value="">Todas</option><option value="GENERAL">Livre</option><option value="TEEN">Teen</option><option value="MATURE">Mature</option><option value="EXPLICIT">Explicit</option><option value="NOT_RATED">Não classificada</option>
-                  </select>
-                </label>
-                <label>Status
-                  <select value={filters.status} onChange={(event) => updateFilter('status', event.target.value)}>
-                    <option value="">Todos</option><option value="COMPLETE">Completa</option><option value="ONGOING">Em andamento</option><option value="HIATUS">Hiato</option>
-                  </select>
-                </label>
-                <label>Palavras mínimas<input type="number" min="0" step="1000" value={filters.minWords} onChange={(event) => updateFilter('minWords', event.target.value)} placeholder="ex.: 10000" /></label>
-                <label>Incluir tag<input value={filters.includeTag} onChange={(event) => updateFilter('includeTag', event.target.value)} placeholder="ex.: Slow Burn" /></label>
-                <label>Excluir tag<input value={filters.excludeTag} onChange={(event) => updateFilter('excludeTag', event.target.value)} placeholder="ex.: Major Character Death" /></label>
-                <label className="check-row"><input type="checkbox" checked={filters.hideExplicit} onChange={(event) => updateFilter('hideExplicit', event.target.checked)} /> Ocultar conteúdo Explicit</label>
+
+                <button className="primary-button filter-mobile-done" onClick={() => setFiltersOpen(false)}>Ver {fullNumber(resultTotal)} resultados</button>
               </aside>
-              <div className="results-pane">
-                <div className="search-summary">{query ? <>Resultados para <strong>“{query}”</strong>.</> : 'Mostrando o acervo público.'}</div>
-                {results.length ? (
-                  <div className={`work-grid ${layout === 'list' ? 'list' : ''}`}>{results.map((work) => <WorkCard key={work.id} work={work} onOpen={openWork} onBookmark={toggleBookmark} />)}</div>
+
+              <div className="results-pane-v4">
+                <div className="results-status-line" aria-live="polite">
+                  <span>{resultsLoading ? 'Atualizando resultados…' : debouncedQuery ? <>Resultados para <strong>“{debouncedQuery}”</strong></> : 'Todo o acervo público'}</span>
+                  {activeFilterCount > 0 && <span>{activeFilterCount} filtro{activeFilterCount === 1 ? '' : 's'} aplicado{activeFilterCount === 1 ? '' : 's'}</span>}
+                </div>
+                {resultsLoading && results.length === 0 ? (
+                  <div className="search-skeleton-grid" aria-label="Carregando obras">{Array.from({ length: 6 }).map((_, index) => <div className="search-skeleton-card" key={index}><span /><b /><i /><i /></div>)}</div>
+                ) : results.length ? (
+                  <div className={`work-grid ${layout === 'list' ? 'list' : ''} ${resultsLoading ? 'results-refreshing' : ''}`}>{results.map((work) => <WorkCard key={work.id} work={work} onOpen={openWork} onBookmark={toggleBookmark} />)}</div>
                 ) : (
-                  <div className="empty-state centered compact-empty"><span>⌕</span><h2>Nenhuma obra encontrada</h2><p>Altere a busca ou os filtros.</p></div>
+                  <div className="empty-state centered explore-empty"><span>⌕</span><h2>Nenhuma história por aqui</h2><p>Tente remover um filtro, buscar outro termo ou explorar um fandom diferente.</p><button className="secondary-button" onClick={clearFilters}>Limpar busca e filtros</button></div>
                 )}
                 {resultTotal > PAGE_SIZE && (
-                  <div className="pager">
-                    <button className="secondary-button" disabled={page <= 0} onClick={() => setPage((value) => Math.max(0, value - 1))}>← Anterior</button>
-                    <span>{page + 1} / {totalPages}</span>
-                    <button className="secondary-button" disabled={page + 1 >= totalPages} onClick={() => setPage((value) => value + 1)}>Próxima →</button>
+                  <div className="pager pager-v4">
+                    <button className="secondary-button" disabled={page <= 0} onClick={() => { setPage((value) => Math.max(0, value - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>← Anterior</button>
+                    <div><strong>{page + 1}</strong><span>de {totalPages}</span></div>
+                    <button className="secondary-button" disabled={page + 1 >= totalPages} onClick={() => { setPage((value) => value + 1); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>Próxima →</button>
                   </div>
                 )}
               </div>
