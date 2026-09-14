@@ -25,6 +25,10 @@ type ReaderTheme = 'DARK' | 'LIGHT' | 'SEPIA'
 type ReaderFont = 'SERIF' | 'SANS' | 'MONO'
 type LibraryState = 'TO_READ' | 'READING' | 'COMPLETED' | 'FAVORITE'
 
+function offlineWorkKey(workId: string) {
+  return 'archive-nova:offline-work:' + workId + ':v1'
+}
+
 export function PublicWorkPage({ workId }: { workId: string }) {
   const configured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
   const supabase = useMemo(() => configured ? createClient() : null, [configured])
@@ -49,6 +53,7 @@ export function PublicWorkPage({ workId }: { workId: string }) {
   const [reportReason, setReportReason] = useState('HARASSMENT')
   const [reportDetails, setReportDetails] = useState('')
   const [supportEnabled, setSupportEnabled] = useState(false)
+  const [offlineSaved, setOfflineSaved] = useState(false)
 
   const currentChapter = detail?.chapters.find((chapter) => chapter.id === chapterId) || detail?.chapters[0] || null
   const isOwner = Boolean(user && detail?.work.creator_id === user.id)
@@ -60,13 +65,30 @@ export function PublicWorkPage({ workId }: { workId: string }) {
     const { data, error: detailError } = await supabase.rpc('get_work_detail', { target_work: workId })
     if (detailError || !data) {
       console.error(detailError)
-      setError('Esta obra não existe ou não está disponível para você.')
+      try {
+        const cached = window.localStorage.getItem(offlineWorkKey(workId))
+        if (cached) {
+          const snapshot = JSON.parse(cached) as WorkDetail
+          setDetail(snapshot)
+          setOfflineSaved(true)
+          const requested = new URLSearchParams(window.location.search).get('chapter')
+          setChapterId(requested && snapshot.chapters.some(ch => ch.id === requested) ? requested : snapshot.chapters[0]?.id || '')
+          setError('')
+          setLoading(false)
+          return
+        }
+      } catch {}
+      setError('Esta obra não existe, não está disponível ou ainda não foi salva para leitura offline.')
       setLoading(false)
       return
     }
     const raw = data as { work: Record<string, unknown>; chapters: Record<string, unknown>[] }
     const next: WorkDetail = { work: normalizeWork(raw.work), chapters: (raw.chapters || []).map(normalizeChapter) }
     setDetail(next)
+    try {
+      window.localStorage.setItem(offlineWorkKey(workId), JSON.stringify(next))
+      setOfflineSaved(true)
+    } catch {}
     const [supportResponse, prefResponse, progressResponse, libraryResponse] = await Promise.all([
       supabase.from('creator_support_profiles').select('enabled').eq('user_id', next.work.creator_id).eq('enabled', true).maybeSingle(),
       currentUser ? supabase.rpc('get_reader_preferences') : Promise.resolve({ data: null }),
@@ -94,7 +116,7 @@ export function PublicWorkPage({ workId }: { workId: string }) {
         : next.chapters[0]?.id || ''
     setChapterId((current) => current && next.chapters.some((chapter) => chapter.id === current) ? current : initialChapter)
     if (progress.scroll_offset && typeof window !== 'undefined' && !requested) {
-      window.setTimeout(() => window.scrollTo({ top: Number(progress.scroll_offset) || 0, behavior: 'instant' as ScrollBehavior }), 180)
+      window.setTimeout(() => window.scrollTo({ top: Number(progress.scroll_offset) || 0, behavior: 'auto' }), 180)
     }
     setLoading(false)
   }, [supabase, workId])
@@ -153,6 +175,21 @@ export function PublicWorkPage({ workId }: { workId: string }) {
     if (user) return true
     window.location.href = `/explore?auth=login&return=${encodeURIComponent(`/works/${workId}`)}`
     return false
+  }
+
+  async function saveOfflineCopy() {
+    if (!detail) return
+    try {
+      window.localStorage.setItem(offlineWorkKey(workId), JSON.stringify(detail))
+      if ('caches' in window) {
+        const cache = await window.caches.open('archive-nova-v4-5-public-v1')
+        await cache.add('/works/' + workId)
+      }
+      setOfflineSaved(true)
+      notify('Obra salva para leitura offline.')
+    } catch {
+      notify('Não foi possível salvar a cópia offline neste dispositivo.')
+    }
   }
 
   async function toggleKudos() {
@@ -277,6 +314,7 @@ export function PublicWorkPage({ workId }: { workId: string }) {
             {isOwner ? <Link className="reader-social-button" href={`/works/${work.id}/contribute`}><NovaIcon name="branch" size={16} /> Contribuições</Link> : work.allow_contributions ? <Link className="reader-social-button" href={`/works/${work.id}/contribute`}><NovaIcon name="branch" size={16} /> Contribuir</Link> : null}
             {!isOwner && supportEnabled ? <Link className="reader-social-button support" href={`/support/${encodeURIComponent(work.author_username)}`}><NovaIcon name="heart" size={16} /> Apoiar autor</Link> : null}
             {!isOwner ? <button className="reader-social-button subtle" onClick={() => setReportTarget({ type: 'work', id: work.id, label: work.title })}><NovaIcon name="flag" size={16} /> Denunciar</button> : null}
+            <button className={`reader-social-button ${offlineSaved ? 'active' : ''}`} onClick={() => void saveOfflineCopy()}><NovaIcon name="bookmark" size={16} /> {offlineSaved ? 'Offline ✓' : 'Salvar offline'}</button>
             {!isOwner ? <select className="reader-library-select" value={libraryState} onChange={(event) => { if (event.target.value) void setLibraryState(event.target.value as LibraryState) }} aria-label="Adicionar à biblioteca"><option value="">Biblioteca…</option><option value="TO_READ">Quero ler</option><option value="READING">Lendo</option><option value="COMPLETED">Concluída</option><option value="FAVORITE">Favorita</option></select> : null}
           </div>
         </section>
