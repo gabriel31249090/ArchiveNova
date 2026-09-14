@@ -19,7 +19,8 @@ import type {
   WorkDetail,
   WorkFilters,
 } from '@/lib/types'
-import { compactNumber, formatDate, fullNumber, ratingLabel, splitLabels } from '@/lib/format'
+import { compactNumber, formatDate, fullNumber, ratingLabel } from '@/lib/format'
+import { sanitizeStoryHtml } from '@/lib/writer-draft'
 
 const PAGE_SIZE = 12
 const EMPTY_STATS: PlatformStats = { works: 0, fandoms: 0, users: 0, words: 0 }
@@ -90,8 +91,6 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
   const supabase = useMemo(() => configured ? createClient() : null, [configured])
 
   const readerDialog = useRef<HTMLDialogElement>(null)
-  const publishDialog = useRef<HTMLDialogElement>(null)
-  const chapterDialog = useRef<HTMLDialogElement>(null)
   const authDialog = useRef<HTMLDialogElement>(null)
   const searchInput = useRef<HTMLInputElement>(null)
 
@@ -264,6 +263,23 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
     setTheme(nextTheme)
     document.documentElement.dataset.theme = nextTheme
   }, [])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('auth') === 'login') {
+      setAuthMode('login')
+      setAuthError('')
+      window.requestAnimationFrame(() => authDialog.current?.showModal())
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!supabase) return
+    const workId = new URLSearchParams(window.location.search).get('work')
+    if (workId) window.requestAnimationFrame(() => void openWork(workId))
+    // openWork is a function declaration and uses the current Supabase client.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase])
 
   useEffect(() => {
     if (!supabase) return
@@ -479,75 +495,6 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
     notify('Comentário publicado.')
   }
 
-  async function submitPublish(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const formElement = event.currentTarget
-    if (!requireUser() || !supabase) return
-    const form = new FormData(formElement)
-    const title = readFormString(form, 'title')
-    const fandom = readFormString(form, 'fandom')
-    const content = readFormString(form, 'content')
-    if (!title || !fandom || !content) return
-
-    setBusy(true)
-    const expectedText = readFormString(form, 'expected')
-    const { data, error } = await supabase.rpc('publish_work', {
-      work_title: title,
-      work_summary: readFormString(form, 'summary'),
-      work_rating: readFormString(form, 'rating') || 'GENERAL',
-      work_status: readFormString(form, 'status') || 'ONGOING',
-      fandom_names: splitLabels(fandom),
-      tag_names: splitLabels(readFormString(form, 'tags')),
-      chapter_title: readFormString(form, 'chapterTitle') || null,
-      chapter_content: content,
-      expected_chapter_count: expectedText ? Number(expectedText) : null,
-      work_language: 'pt-BR',
-      allow_comments_input: form.get('allowComments') === 'on',
-    })
-    setBusy(false)
-
-    if (error) {
-      console.error(error)
-      notify(error.message || 'Não foi possível publicar a obra.')
-      return
-    }
-
-    formElement.reset()
-    publishDialog.current?.close()
-    notify('Obra publicada no banco do Supabase.')
-    await refreshPublic()
-    if (data) await openWork(String(data))
-  }
-
-  async function submitChapter(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const formElement = event.currentTarget
-    if (!reader || !requireUser() || !supabase) return
-    const form = new FormData(formElement)
-    const content = readFormString(form, 'chapterContent')
-    if (!content) return
-
-    setBusy(true)
-    const { error } = await supabase.rpc('add_chapter', {
-      target_work: reader.work.id,
-      chapter_title: readFormString(form, 'chapterTitle') || null,
-      chapter_content: content,
-      publish_now: true,
-    })
-    setBusy(false)
-
-    if (error) {
-      console.error(error)
-      notify('Não foi possível publicar o capítulo.')
-      return
-    }
-
-    formElement.reset()
-    chapterDialog.current?.close()
-    await Promise.all([refreshReader(), refreshPublic()])
-    notify('Novo capítulo publicado.')
-  }
-
   async function submitLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const formElement = event.currentTarget
@@ -577,6 +524,8 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
       formElement.reset()
       authDialog.current?.close()
       notify('Você entrou na sua conta.')
+      const returnTo = new URLSearchParams(window.location.search).get('return')
+      if (returnTo?.startsWith('/')) window.location.href = returnTo
     } catch (error) {
       console.error('Erro inesperado no login:', error)
       setAuthError('Ocorreu um erro inesperado ao entrar.')
@@ -629,6 +578,8 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
       if (data.session) {
         authDialog.current?.close()
         notify('Conta criada e conectada.')
+        const returnTo = new URLSearchParams(window.location.search).get('return')
+        if (returnTo?.startsWith('/')) window.location.href = returnTo
       } else {
         setAuthError('Conta criada. Confira seu e-mail para confirmar o cadastro.')
       }
@@ -690,6 +641,7 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
             <button className={`nav-item ${view === 'explore' ? 'active' : ''}`} onClick={() => changeView('explore')}><span>⌕</span> Explorar</button>
             <button className={`nav-item ${view === 'library' ? 'active' : ''}`} onClick={() => changeView('library')}><span>♡</span> Minha biblioteca</button>
             <button className={`nav-item ${view === 'history' ? 'active' : ''}`} onClick={() => changeView('history')}><span>↺</span> Histórico</button>
+            <Link className="nav-item" href="/dashboard/works"><span>✎</span> Minhas obras</Link>
           </nav>
 
           <div className="sidebar-section">
@@ -885,7 +837,7 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
                   {reader.chapters.map((chapter) => <option key={chapter.id} value={chapter.id}>{chapter.chapter_number}. {chapter.title || `Capítulo ${chapter.chapter_number}`}</option>)}
                 </select>
               </label>
-              {isOwner && <button className="secondary-button" onClick={() => chapterDialog.current?.showModal()}>＋ Novo capítulo</button>}
+              {isOwner && <Link className="secondary-button reader-manage-link" href={`/works/${reader.work.id}/manage`} onClick={() => readerDialog.current?.close()}>⚙ Gerenciar obra</Link>}
             </div>
 
             <article className="reader-content" style={{ '--reader-size': `${readerFont}px` } as CSSProperties}>
@@ -895,7 +847,11 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
                 <>
                   {currentChapter.title && <h2>{currentChapter.title}</h2>}
                   {currentChapter.notes_before && <aside className="chapter-note">{currentChapter.notes_before}</aside>}
-                  {chapterParagraphs.map((paragraph, index) => <p key={`${currentChapter.id}-${index}`}>{paragraph.split('\n').map((line, lineIndex) => <span key={lineIndex}>{line}{lineIndex < paragraph.split('\n').length - 1 && <br />}</span>)}</p>)}
+                  {/<\/?(?:p|h[1-3]|ul|ol|li|blockquote|strong|em|u|s|hr|br)\b/i.test(currentChapter.content) ? (
+                    <div className="reader-rich-text" dangerouslySetInnerHTML={{ __html: sanitizeStoryHtml(currentChapter.content) }} />
+                  ) : (
+                    chapterParagraphs.map((paragraph, index) => <p key={`${currentChapter.id}-${index}`}>{paragraph.split('\n').map((line, lineIndex) => <span key={lineIndex}>{line}{lineIndex < paragraph.split('\n').length - 1 && <br />}</span>)}</p>)
+                  )}
                   {currentChapter.notes_after && <aside className="chapter-note">{currentChapter.notes_after}</aside>}
                 </>
               ) : <p>Esta obra ainda não possui capítulos publicados.</p>}
@@ -926,36 +882,6 @@ export function ArchiveNovaApp({ initialView = 'home' }: { initialView?: Archive
             </section>
           </>
         )}
-      </dialog>
-
-      <dialog ref={publishDialog} className="publish-dialog">
-        <form onSubmit={submitPublish}>
-          <div className="modal-head"><div><p className="eyebrow">Nova obra</p><h2>Publicar</h2></div><button type="button" className="icon-button" onClick={() => publishDialog.current?.close()} aria-label="Fechar">×</button></div>
-          <div className="form-grid">
-            <label className="span-2">Título<input name="title" required maxLength={300} placeholder="Título da obra" /></label>
-            <label>Fandom<input name="fandom" required maxLength={220} placeholder="Nome do fandom" /></label>
-            <label>Classificação<select name="rating" defaultValue="GENERAL"><option value="GENERAL">Livre</option><option value="TEEN">Teen</option><option value="MATURE">Mature</option><option value="EXPLICIT">Explicit</option><option value="NOT_RATED">Não classificada</option></select></label>
-            <label>Status<select name="status" defaultValue="ONGOING"><option value="ONGOING">Em andamento</option><option value="COMPLETE">Completa</option><option value="HIATUS">Hiato</option></select></label>
-            <label>Capítulos planejados<input name="expected" type="number" min="1" placeholder="opcional" /></label>
-            <label className="span-2">Tags<input name="tags" placeholder="separe por vírgulas" /></label>
-            <label className="span-2">Resumo<textarea name="summary" rows={3} maxLength={10000} placeholder="Do que trata sua história?" /></label>
-            <label className="span-2">Título do capítulo<input name="chapterTitle" maxLength={300} placeholder="opcional" /></label>
-            <label className="span-2">Primeiro capítulo<textarea name="content" rows={12} required placeholder="Comece a escrever…" /></label>
-            <label className="check-row span-2"><input name="allowComments" type="checkbox" defaultChecked /> Permitir comentários</label>
-          </div>
-          <div className="modal-actions"><button type="button" className="ghost-button" onClick={() => publishDialog.current?.close()}>Cancelar</button><button className="primary-button" disabled={busy} type="submit">{busy ? 'Publicando…' : 'Publicar'}</button></div>
-        </form>
-      </dialog>
-
-      <dialog ref={chapterDialog} className="publish-dialog small-dialog">
-        <form onSubmit={submitChapter}>
-          <div className="modal-head"><div><p className="eyebrow">Continuar obra</p><h2>Novo capítulo</h2></div><button type="button" className="icon-button" onClick={() => chapterDialog.current?.close()} aria-label="Fechar">×</button></div>
-          <div className="form-grid">
-            <label className="span-2">Título<input name="chapterTitle" maxLength={300} placeholder="opcional" /></label>
-            <label className="span-2">Conteúdo<textarea name="chapterContent" rows={14} required /></label>
-          </div>
-          <div className="modal-actions"><button type="button" className="ghost-button" onClick={() => chapterDialog.current?.close()}>Cancelar</button><button className="primary-button" disabled={busy} type="submit">Publicar capítulo</button></div>
-        </form>
       </dialog>
 
       <dialog ref={authDialog} className="publish-dialog auth-dialog">

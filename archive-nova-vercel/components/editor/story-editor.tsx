@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
+import { DRAFT_STORAGE_KEY, type LocalWriterDraft } from '@/lib/writer-draft'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -9,17 +10,7 @@ import TextAlign from '@tiptap/extension-text-align'
 
 type TiptapEditor = NonNullable<ReturnType<typeof useEditor>>
 
-const DRAFT_STORAGE_KEY = 'archive-nova:writer:draft:v1'
-
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
-
-type LocalDraft = {
-  version: 1
-  title: string
-  chapterTitle: string
-  content: string
-  updatedAt: string
-}
 
 function countWords(text: string) {
   const cleaned = text.trim()
@@ -185,7 +176,7 @@ export function StoryEditor() {
     if (!hydratedDraft) return
 
     try {
-      const draft: LocalDraft = {
+      const draft: LocalWriterDraft = {
         version: 1,
         title,
         chapterTitle,
@@ -208,7 +199,7 @@ export function StoryEditor() {
     try {
       const rawDraft = localStorage.getItem(DRAFT_STORAGE_KEY)
       if (rawDraft) {
-        const draft = JSON.parse(rawDraft) as Partial<LocalDraft>
+        const draft = JSON.parse(rawDraft) as Partial<LocalWriterDraft>
         const savedContent = typeof draft.content === 'string' ? draft.content : '<p></p>'
         const savedTitle = typeof draft.title === 'string' ? draft.title : ''
         const savedChapterTitle = typeof draft.chapterTitle === 'string' ? draft.chapterTitle : ''
@@ -364,7 +355,18 @@ export function StoryEditor() {
           <button
             className="writer-action-button primary"
             type="button"
-            onClick={() => setNotice('Seu texto está salvo. O novo fluxo de publicação será conectado na próxima fase.')}
+            onClick={() => {
+              saveDraftImmediately()
+              if (!title.trim()) {
+                setNotice('Dê um título à obra antes de seguir para a publicação.')
+                return
+              }
+              if (!editor?.getText().trim()) {
+                setNotice('Escreva o primeiro capítulo antes de publicar.')
+                return
+              }
+              window.location.href = '/publish'
+            }}
           >
             Publicar
           </button>
