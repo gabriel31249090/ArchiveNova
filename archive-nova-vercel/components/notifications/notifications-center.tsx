@@ -5,16 +5,17 @@ import { useEffect, useMemo, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { NovaHeader } from '@/components/shared/nova-header'
+import { NovaIcon, type NovaIconName } from '@/components/ui/nova-icon'
 import type { NotificationItem } from '@/lib/types'
 
-function labelFor(item: NotificationItem) {
+function labelFor(item: NotificationItem): { icon: NovaIconName; title: string; body: string } {
   const actor = item.actor_display_name || item.actor_username || 'Alguém'
-  if (item.type === 'KUDOS') return { icon: '♥', title: `${actor} deixou kudos`, body: item.work_title ? `em “${item.work_title}”` : 'em uma das suas obras.' }
-  if (item.type === 'COMMENT') return { icon: '☁', title: `${actor} comentou`, body: item.work_title ? `em “${item.work_title}”` : 'em uma das suas obras.' }
-  if (item.type === 'COMMENT_REPLY') return { icon: '↩', title: `${actor} respondeu seu comentário`, body: item.work_title ? `em “${item.work_title}”` : '' }
-  if (item.type === 'NEW_FOLLOWER') return { icon: '＋', title: `${actor} começou a seguir você`, body: 'Um novo leitor entrou no seu arquivo.' }
-  if (item.type === 'NEW_CHAPTER') return { icon: '✎', title: 'Novo capítulo publicado', body: item.work_title ? `“${item.work_title}” foi atualizada.` : 'Uma obra que você acompanha foi atualizada.' }
-  return { icon: '✦', title: 'Nova atividade', body: item.work_title || '' }
+  if (item.type === 'KUDOS') return { icon: 'heart', title: `${actor} deixou kudos`, body: item.work_title ? `em “${item.work_title}”` : 'em uma das suas obras.' }
+  if (item.type === 'COMMENT') return { icon: 'comment', title: `${actor} comentou`, body: item.work_title ? `em “${item.work_title}”` : 'em uma das suas obras.' }
+  if (item.type === 'COMMENT_REPLY') return { icon: 'reply', title: `${actor} respondeu seu comentário`, body: item.work_title ? `em “${item.work_title}”` : '' }
+  if (item.type === 'NEW_FOLLOWER') return { icon: 'plus', title: `${actor} começou a seguir você`, body: 'Um novo leitor entrou no seu arquivo.' }
+  if (item.type === 'NEW_CHAPTER') return { icon: 'write', title: 'Novo capítulo publicado', body: item.work_title ? `“${item.work_title}” foi atualizada.` : 'Uma obra que você acompanha foi atualizada.' }
+  return { icon: 'bell', title: 'Nova atividade', body: item.work_title || '' }
 }
 
 function relativeDate(value: string) {
@@ -77,7 +78,7 @@ export function NotificationsCenter() {
   }
 
   if (loading) return <><NovaHeader title="Notificações" /><main className="notifications-page"><div className="studio-loading"><span /><h1>Carregando atividade…</h1></div></main></>
-  if (!user) return <><NovaHeader title="Notificações" /><main className="notifications-page"><div className="studio-gate"><span>♢</span><h1>Entre para ver sua atividade.</h1><p>Kudos, comentários, seguidores e novos capítulos aparecem aqui.</p><Link className="primary-button" href="/explore?auth=login&return=/notifications">Entrar</Link></div></main></>
+  if (!user) return <><NovaHeader title="Notificações" /><main className="notifications-page"><div className="studio-gate"><span><NovaIcon name="bell" size={34} /></span><h1>Entre para ver sua atividade.</h1><p>Kudos, comentários, seguidores e novos capítulos aparecem aqui.</p><Link className="primary-button" href="/explore?auth=login&return=/notifications">Entrar</Link></div></main></>
 
   return (
     <>
@@ -86,12 +87,12 @@ export function NotificationsCenter() {
         <section className="notifications-head"><div><p className="eyebrow">Sua atividade</p><h1>Notificações</h1><p>Acompanhe leitores, conversas e histórias que você segue.</p></div><div className="notifications-head-actions"><button className={`secondary-button ${onlyUnread ? 'active' : ''}`} onClick={() => setOnlyUnread((value) => !value)}>{onlyUnread ? 'Mostrando não lidas' : 'Somente não lidas'}</button><button className="primary-button" disabled={!unread} onClick={markAll}>Marcar todas como lidas</button></div></section>
         {error ? <div className="studio-alert error">{error}</div> : null}
         <section className="notifications-shell">
-          <div className="notifications-summary"><span className="notification-orb">♢{unread > 0 ? <i /> : null}</span><div><strong>{unread}</strong><span>não lida{unread === 1 ? '' : 's'}</span></div></div>
+          <div className="notifications-summary"><span className="notification-orb"><NovaIcon name="bell" size={22} />{unread > 0 ? <i /> : null}</span><div><strong>{unread}</strong><span>não lida{unread === 1 ? '' : 's'}</span></div></div>
           <div className="notification-list">
             {items.length ? items.map((item) => {
               const copy = labelFor(item)
-              return <button className={`notification-row ${item.read_at ? '' : 'unread'}`} key={item.id} onClick={() => void openNotification(item)}><span className="notification-icon">{copy.icon}</span><div className="notification-copy"><div><strong>{copy.title}</strong>{!item.read_at ? <i /> : null}</div><p>{copy.body}</p><small>{relativeDate(item.created_at)}</small></div><span className="notification-arrow">→</span></button>
-            }) : <div className="studio-empty large"><span>♢</span><h2>{onlyUnread ? 'Tudo lido' : 'Nenhuma notificação ainda'}</h2><p>{onlyUnread ? 'Você está em dia com sua atividade.' : 'Quando algo acontecer no seu arquivo, aparecerá aqui.'}</p></div>}
+              return <button className={`notification-row ${item.read_at ? '' : 'unread'}`} key={item.id} onClick={() => void openNotification(item)}><span className="notification-icon"><NovaIcon name={copy.icon} size={19} /></span><div className="notification-copy"><div><strong>{copy.title}</strong>{!item.read_at ? <i /> : null}</div><p>{copy.body}</p><small>{relativeDate(item.created_at)}</small></div><span className="notification-arrow"><NovaIcon name="arrowRight" size={16} /></span></button>
+            }) : <div className="studio-empty large"><span><NovaIcon name="bell" size={30} /></span><h2>{onlyUnread ? 'Tudo lido' : 'Nenhuma notificação ainda'}</h2><p>{onlyUnread ? 'Você está em dia com sua atividade.' : 'Quando algo acontecer no seu arquivo, aparecerá aqui.'}</p></div>}
           </div>
         </section>
       </main>
