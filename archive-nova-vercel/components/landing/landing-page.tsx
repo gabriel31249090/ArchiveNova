@@ -22,6 +22,15 @@ type LandingFandom = {
 
 const EMPTY_STATS: LandingStats = { works: 0, fandoms: 0, users: 0, words: 0 }
 
+const PLATFORM_FEATURES = [
+  ['Writer Cloud', 'Rascunhos sincronizados entre dispositivos, autosave e capítulos organizados.', '/write', '✎'],
+  ['Feed transparente', 'Recomendações com o motivo de cada história aparecer para você.', '/feed', '✦'],
+  ['Posts da comunidade', 'Atualizações, imagens, enquetes e conversas entre leitores e escritores.', '/posts', '☁'],
+  ['Colaboração revisável', 'Contribuições inspiradas em pull requests: revisar, pedir mudanças e mesclar.', '/faq', '⑂'],
+  ['Apoio direto', 'Autores podem compartilhar PIX e outros meios de apoio sem intermediação.', '/support', '♡'],
+  ['Busca sem ranking secreto', 'Fandoms, tags, classificação, tamanho e filtros continuam sob seu controle.', '/explore', '⌕'],
+] as const
+
 export function LandingPage() {
   const configured = Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -30,9 +39,13 @@ export function LandingPage() {
   const supabase = useMemo(() => (configured ? createClient() : null), [configured])
   const [stats, setStats] = useState<LandingStats>(EMPTY_STATS)
   const [fandoms, setFandoms] = useState<LandingFandom[]>([])
+  const [dataReady, setDataReady] = useState(false)
 
   useEffect(() => {
-    if (!supabase) return
+    if (!supabase) {
+      setDataReady(true)
+      return
+    }
 
     const client = supabase
     let active = true
@@ -40,7 +53,7 @@ export function LandingPage() {
     async function loadLandingData() {
       const [statsResponse, fandomResponse] = await Promise.all([
         client.rpc('platform_stats'),
-        client.rpc('active_fandoms', { limit_count: 8 }),
+        client.rpc('active_fandoms', { limit_count: 10 }),
       ])
 
       if (!active) return
@@ -69,6 +82,7 @@ export function LandingPage() {
           total_words: Number(row.total_words || 0),
         })),
       )
+      setDataReady(true)
     }
 
     void loadLandingData()
@@ -78,8 +92,33 @@ export function LandingPage() {
     }
   }, [supabase])
 
+  useEffect(() => {
+    const elements = Array.from(document.querySelectorAll<HTMLElement>('[data-landing-reveal]'))
+
+    if (!('IntersectionObserver' in window)) {
+      elements.forEach((element) => element.classList.add('is-visible'))
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return
+          entry.target.classList.add('is-visible')
+          observer.unobserve(entry.target)
+        })
+      },
+      { rootMargin: '0px 0px -8% 0px', threshold: 0.08 },
+    )
+
+    elements.forEach((element) => observer.observe(element))
+    return () => observer.disconnect()
+  }, [])
+
+  const statValue = (value: number) => (dataReady ? fullNumber(value) : '—')
+
   return (
-    <main className="landing-page">
+    <main className="landing-page landing-v4">
       <header className="landing-nav-wrap">
         <nav className="landing-nav" aria-label="Navegação da página inicial">
           <Link className="landing-brand" href="/" aria-label="Archive Nova — início">
@@ -92,135 +131,241 @@ export function LandingPage() {
 
           <div className="landing-links" aria-label="Atalhos">
             <Link href="/explore">Explorar</Link>
-            <a href="#escrever">Para escritores</a>
-            <a href="#arquivo">Sobre o arquivo</a>
+            <Link href="/feed">Feed</Link>
+            <Link href="/posts">Posts</Link>
+            <Link href="/faq">FAQ</Link>
           </div>
 
           <div className="landing-nav-actions">
-            <Link className="landing-login" href="/explore">Entrar</Link>
-            <Link className="landing-button small" href="/explore">Abrir arquivo</Link>
+            <Link className="landing-login" href="/explore?auth=login&return=%2Fexplore">Entrar</Link>
+            <Link className="landing-button small" href="/write">Escrever</Link>
           </div>
         </nav>
       </header>
 
-      <section className="landing-hero" id="arquivo">
-        <div className="landing-hero-copy">
-          <div className="landing-kicker"><span /> Arquivo comunitário independente</div>
+      <section className="landing-hero landing-v4-hero" id="arquivo">
+        <div className="landing-hero-copy landing-v4-copy">
+          <div className="landing-v4-badge-row">
+            <div className="landing-kicker"><span /> Archive Nova v4</div>
+            <span className="landing-v4-live"><i /> comunidade + escrita</span>
+          </div>
+
           <h1>
             Histórias merecem um lugar para <em>continuar existindo.</em>
           </h1>
           <p>
-            Leia, escreva e organize ficção em um arquivo feito para pessoas — com busca detalhada,
-            fandoms, tags legíveis e uma biblioteca que não depende de um feed escolhendo por você.
+            Leia, escreva, publique, converse e colabore em um arquivo comunitário feito para pessoas.
+            O Archive Nova reúne busca detalhada, Writer Cloud, posts, feed transparente e ferramentas
+            de colaboração sem esconder suas escolhas atrás de um ranking secreto.
           </p>
+
           <div className="landing-hero-actions">
-            <Link className="landing-button" href="/explore">Explorar histórias <span>→</span></Link>
+            <Link className="landing-button" href="/explore">Entrar no arquivo <span>→</span></Link>
             <Link className="landing-button secondary" href="/write">Começar a escrever</Link>
           </div>
-          <div className="landing-proof" aria-label="Estatísticas atuais do Archive Nova">
-            <span><strong>{fullNumber(stats.works)}</strong> obras</span>
-            <span><strong>{fullNumber(stats.fandoms)}</strong> fandoms</span>
-            <span><strong>{fullNumber(stats.users)}</strong> contas</span>
+
+          <div className="landing-v4-trust">
+            <span><b>✦</b> recomendações explicáveis</span>
+            <span><b>✓</b> rascunhos na nuvem</span>
+            <span><b>⑂</b> colaboração revisável</span>
           </div>
         </div>
 
-        <div className="landing-hero-art" aria-label="Prévia conceitual do Archive Nova">
-          <div className="archive-window">
-            <div className="archive-window-top">
+        <div className="landing-v4-stage" aria-label="Prévia conceitual do Archive Nova">
+          <div className="landing-v4-glow" />
+          <div className="landing-v4-orbit orbit-a" />
+          <div className="landing-v4-orbit orbit-b" />
+
+          <div className="landing-v4-app-preview">
+            <header>
               <div className="archive-dots"><span /><span /><span /></div>
-              <span className="archive-window-label">ARCHIVE / READER</span>
-            </div>
-            <div className="archive-document">
-              <span className="archive-overline">CAPÍTULO 01</span>
-              <div className="archive-title-line" />
-              <div className="archive-title-line short" />
-              <div className="archive-paragraph"><i /><i /><i /><i /></div>
-              <div className="archive-paragraph second"><i /><i /><i /></div>
-              <div className="archive-foot">
-                <span>Sem distrações</span>
-                <span>{compactNumber(stats.words)} palavras arquivadas</span>
-              </div>
+              <strong>ARCHIVE NOVA / FEED</strong>
+              <span className="landing-v4-preview-live"><i /> LIVE</span>
+            </header>
+            <div className="landing-v4-preview-body">
+              <aside>
+                <span className="active">✦</span>
+                <span>⌕</span>
+                <span>☁</span>
+                <span>♡</span>
+                <span>✎</span>
+              </aside>
+              <section>
+                <div className="landing-v4-preview-search">⌕ <span>buscar histórias, tags, fandoms…</span></div>
+                <div className="landing-v4-preview-reason">✦ Porque você acompanha este fandom</div>
+                <article>
+                  <div className="landing-v4-preview-cover">A</div>
+                  <div>
+                    <small>FANDOM · EM ANDAMENTO</small>
+                    <h3>Uma história esperando para ser encontrada</h3>
+                    <p>Tags legíveis, leitura confortável e contexto antes de você abrir.</p>
+                    <div><span>slow burn</span><span>found family</span><span>aventura</span></div>
+                  </div>
+                </article>
+                <article className="secondary-preview">
+                  <div className="landing-v4-preview-cover alt">N</div>
+                  <div>
+                    <small>RECÉM-PUBLICADA</small>
+                    <h3>Novas vozes entram no arquivo todos os dias</h3>
+                  </div>
+                </article>
+              </section>
             </div>
           </div>
-          <div className="floating-note note-one"><span>♡</span><strong>Guarde</strong><small>sua próxima leitura</small></div>
-          <div className="floating-note note-two"><span>✦</span><strong>Descubra</strong><small>por tags e fandoms</small></div>
+
+          <div className="landing-v4-float float-cloud">
+            <span>☁</span><div><strong>Writer Cloud</strong><small>salvo automaticamente</small></div><b>✓</b>
+          </div>
+          <div className="landing-v4-float float-collab">
+            <span>⑂</span><div><strong>Contribuição #14</strong><small>pronta para revisão</small></div><b>＋</b>
+          </div>
+          <div className="landing-v4-float float-post">
+            <span>♥</span><div><strong>Comunidade</strong><small>posts, enquetes e comentários</small></div>
+          </div>
         </div>
       </section>
 
-      <section className="landing-fandom-strip" aria-label="Fandoms ativos">
+      <section className="landing-v4-metrics" aria-label="Estatísticas atuais do Archive Nova" data-landing-reveal>
+        <div><strong>{statValue(stats.works)}</strong><span>obras públicas</span></div>
+        <div><strong>{statValue(stats.fandoms)}</strong><span>fandoms</span></div>
+        <div><strong>{statValue(stats.users)}</strong><span>contas</span></div>
+        <div><strong>{dataReady ? compactNumber(stats.words) : '—'}</strong><span>palavras arquivadas</span></div>
+      </section>
+
+      <section className="landing-fandom-strip" aria-label="Fandoms ativos" data-landing-reveal>
         <div className="landing-strip-label">NO ARQUIVO AGORA</div>
         <div className="landing-fandom-list">
-          {fandoms.length ? fandoms.map((fandom) => (
-            <Link key={fandom.id} href="/explore" title={`${fandom.work_count} obras`}>
+          {!dataReady ? (
+            <>
+              <span className="landing-v4-chip-skeleton" />
+              <span className="landing-v4-chip-skeleton" />
+              <span className="landing-v4-chip-skeleton" />
+            </>
+          ) : fandoms.length ? fandoms.map((fandom) => (
+            <Link key={fandom.id} href="/explore" title={fandom.work_count + ' obras'}>
               <span>✦</span>{fandom.name}<small>{fandom.work_count}</small>
             </Link>
           )) : <span className="landing-empty-inline">Os fandoms publicados aparecerão aqui.</span>}
         </div>
       </section>
 
-      <section className="landing-section" id="escrever">
+      <section className="landing-section landing-v4-section" id="recursos" data-landing-reveal>
         <div className="landing-section-heading">
-          <span>FEITO PARA O TEXTO</span>
-          <h2>Da primeira frase até a última revisão.</h2>
-          <p>O Archive Nova está sendo construído para tornar escrever e publicar tão confortável quanto ler.</p>
+          <span>O ARCHIVE NOVA HOJE</span>
+          <h2>Mais que um lugar para publicar capítulos.</h2>
+          <p>
+            A plataforma cresceu para acompanhar o processo inteiro: descobrir, escrever, revisar,
+            colaborar, conversar com a comunidade e apoiar quem cria.
+          </p>
         </div>
 
-        <div className="landing-feature-grid">
-          <article className="landing-feature-card featured">
-            <div className="feature-number">01</div>
-            <div className="feature-editor-mini" aria-hidden="true">
-              <div className="editor-mini-toolbar"><b>B</b><i>I</i><span>H1</span><span>“</span><span>↶</span><span>↷</span></div>
-              <div className="editor-mini-sheet">
-                <strong>Uma página que sai do caminho.</strong>
-                <span /><span /><span className="small" />
-              </div>
-            </div>
-            <h3>Escrita sem ruído</h3>
-            <p>Um espaço dedicado para escrever, revisar e continuar rascunhos sem transformar cada capítulo em um formulário.</p>
-          </article>
-
-          <article className="landing-feature-card">
-            <div className="feature-number">02</div>
-            <div className="feature-icon">⌕</div>
-            <h3>Busca que respeita detalhes</h3>
-            <p>Encontre obras por fandom, classificação, status, palavras e tags — inclusive excluindo o que você não quer ler.</p>
-          </article>
-
-          <article className="landing-feature-card">
-            <div className="feature-number">03</div>
-            <div className="feature-icon">♡</div>
-            <h3>Seu arquivo pessoal</h3>
-            <p>Bookmarks, histórico e uma biblioteca organizada para você poder voltar exatamente para as histórias que importam.</p>
-          </article>
+        <div className="landing-v4-feature-grid">
+          {PLATFORM_FEATURES.map(([title, description, href, icon], index) => (
+            <Link className={'landing-v4-feature-card feature-' + (index + 1)} href={href} key={title}>
+              <div className="landing-v4-feature-top"><span>{icon}</span><small>0{index + 1}</small></div>
+              <h3>{title}</h3>
+              <p>{description}</p>
+              <b>Conhecer recurso →</b>
+            </Link>
+          ))}
         </div>
       </section>
 
-      <section className="landing-manifesto">
+      <section className="landing-v4-writer" data-landing-reveal>
+        <div className="landing-v4-writer-copy">
+          <p className="landing-kicker"><span /> Para escritores</p>
+          <h2>Do primeiro rascunho à publicação, sem trocar de ferramenta.</h2>
+          <p>
+            O Writer Pro oferece formatação rica, modos de foco e leitura, capítulos, autosave,
+            sincronização entre dispositivos e importação de documentos.
+          </p>
+          <div className="landing-v4-format-list">
+            <span>DOCX</span><span>PDF</span><span>TXT</span><span>Markdown</span><span>HTML</span><span>RTF</span>
+          </div>
+          <Link className="landing-button" href="/write">Abrir Writer <span>→</span></Link>
+        </div>
+
+        <div className="landing-v4-editor-demo" aria-hidden="true">
+          <div className="landing-v4-editor-toolbar">
+            <span>↶</span><span>↷</span><i />
+            <b>Serif</b><b>18</b><i />
+            <strong>B</strong><em>I</em><u>U</u><span>≡</span><span>☷</span>
+          </div>
+          <div className="landing-v4-editor-sheet">
+            <small>CAPÍTULO 07</small>
+            <h3>A cidade que lembrava nossos nomes</h3>
+            <p>O cursor piscava como se também estivesse esperando pela próxima frase.</p>
+            <p>Do lado de fora, a chuva desenhava pequenas linhas na janela.</p>
+            <span className="landing-v4-caret" />
+          </div>
+          <div className="landing-v4-save-state"><i /> Salvo na nuvem</div>
+        </div>
+      </section>
+
+      <section className="landing-v4-community" data-landing-reveal>
+        <div className="landing-v4-community-preview">
+          <div className="landing-v4-post-card">
+            <header><span>AN</span><div><strong>Archive Nova</strong><small>@archivenova · agora</small></div><b>•••</b></header>
+            <p>Uma história não precisa terminar quando o autor fecha o editor. Ela pode continuar em leitores, comentários, revisões e novas contribuições.</p>
+            <div className="landing-v4-poll">
+              <span><i style={{ width: '72%' }} />Mais capítulos</span>
+              <span><i style={{ width: '46%' }} />Nova história</span>
+            </div>
+            <footer><span>♥ 128</span><span>☁ 34</span><span>↗ compartilhar</span></footer>
+          </div>
+          <div className="landing-v4-contribution-card">
+            <span>⑂</span>
+            <div><small>CONTRIBUIÇÃO</small><strong>Correção de continuidade no capítulo 4</strong><p>2 revisões · pronta para mesclar</p></div>
+            <b>✓</b>
+          </div>
+        </div>
+
+        <div className="landing-v4-community-copy">
+          <p className="landing-kicker"><span /> Comunidade</p>
+          <h2>Leitores também fazem parte do arquivo.</h2>
+          <p>
+            Posts, enquetes, comentários, seguidores e contribuições deixam o Archive Nova vivo
+            sem transformar popularidade em uma regra invisível de distribuição.
+          </p>
+          <div className="landing-v4-community-actions">
+            <Link className="landing-button" href="/posts">Ver posts</Link>
+            <Link className="landing-button secondary" href="/feed">Abrir feed</Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="landing-manifesto landing-v4-manifesto" data-landing-reveal>
         <div>
           <span className="manifesto-mark">✦</span>
-          <p>Sem ranking secreto decidindo o que merece ser encontrado.</p>
+          <p>Publicidade é identificada. Recomendações explicam o motivo. A escolha continua sendo sua.</p>
         </div>
-        <blockquote>“O arquivo existe para preservar a escolha do leitor — e a voz de quem escreve.”</blockquote>
+        <blockquote>“Preservar histórias também significa preservar a autonomia de quem lê e de quem escreve.”</blockquote>
       </section>
 
-      <section className="landing-cta">
+      <section className="landing-cta landing-v4-cta" data-landing-reveal>
         <div>
-          <span>ARCHIVE NOVA</span>
-          <h2>Tem uma história esperando para ser encontrada.</h2>
+          <span>ARCHIVE NOVA · V4</span>
+          <h2>Leia uma história. Escreva outra. Ajude uma terceira a ficar ainda melhor.</h2>
         </div>
         <div className="landing-cta-actions">
-          <Link className="landing-button light" href="/explore">Entrar no arquivo <span>→</span></Link>
-          <small>{fullNumber(stats.words)} palavras publicadas até agora.</small>
+          <Link className="landing-button light" href="/explore">Entrar no Archive Nova <span>→</span></Link>
+          <small>{dataReady ? fullNumber(stats.words) : '—'} palavras publicadas até agora.</small>
         </div>
       </section>
 
-      <footer className="landing-footer">
+      <footer className="landing-footer landing-v4-footer">
         <Link className="landing-brand compact" href="/">
           <span className="landing-brand-mark" aria-hidden="true">✦</span>
           <strong>Archive Nova</strong>
         </Link>
         <p>Um arquivo comunitário de histórias.</p>
-        <Link href="/explore">Explorar o acervo →</Link>
+        <div>
+          <Link href="/explore">Explorar</Link>
+          <Link href="/feed">Feed</Link>
+          <Link href="/posts">Posts</Link>
+          <Link href="/faq">FAQ</Link>
+          <Link href="/support">Apoiar</Link>
+        </div>
       </footer>
     </main>
   )
