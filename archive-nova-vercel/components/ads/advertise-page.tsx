@@ -19,7 +19,7 @@ export function AdvertisePage() {
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const isStaff = role === 'MODERATOR' || role === 'ADMIN'
+  const isAdmin = role === 'ADMIN'
 
   async function load() {
     if (!supabase) return
@@ -29,7 +29,7 @@ export function AdvertisePage() {
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', current.id).maybeSingle()
     const nextRole = String(profile?.role || 'USER')
     setRole(nextRole)
-    if (nextRole === 'MODERATOR' || nextRole === 'ADMIN') {
+    if (nextRole === 'ADMIN') {
       const [requestResponse, campaignResponse] = await Promise.all([
         supabase.from('ad_requests').select('*').order('created_at', { ascending: false }).limit(50),
         supabase.from('ad_campaigns').select('*').order('created_at', { ascending: false }).limit(50),
@@ -67,7 +67,7 @@ export function AdvertisePage() {
 
   async function createCampaign(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!supabase || !isStaff) return
+    if (!supabase || !isAdmin) return
     const form = event.currentTarget
     const values = new FormData(form)
     setBusy(true)
@@ -82,7 +82,7 @@ export function AdvertisePage() {
   }
 
   async function setCampaignStatus(id: string, status: AdCampaign['status']) {
-    if (!supabase || !isStaff) return
+    if (!supabase || !isAdmin) return
     const { error } = await supabase.from('ad_campaigns').update({ status }).eq('id', id)
     if (error) setMessage('Não foi possível atualizar a campanha.')
     else await load()
@@ -101,7 +101,7 @@ export function AdvertisePage() {
 
         {message ? <div className="community-message" role="status">{message}</div> : null}
 
-        {isStaff ? <section className="ad-admin"><header><div><p className="eyebrow">Painel interno</p><h2>Campanhas e solicitações</h2></div><span>Visível apenas para moderação/admin</span></header><div className="ad-admin-layout"><form className="ad-campaign-form" onSubmit={createCampaign}><h3>Nova campanha</h3><input name="advertiser_name" placeholder="Anunciante" required /><input name="title" placeholder="Título" required /><textarea name="body" placeholder="Texto" rows={3} /><input name="image_url" type="url" placeholder="URL da imagem (opcional)" /><input name="target_url" type="url" placeholder="URL de destino" required /><div><select name="placement" defaultValue="FEED"><option value="FEED">Feed</option><option value="EXPLORE">Explorar</option><option value="READER">Leitor</option><option value="SIDEBAR">Sidebar</option></select><select name="status" defaultValue="DRAFT"><option value="DRAFT">Rascunho</option><option value="ACTIVE">Ativa</option></select><input name="weight" type="number" min="1" max="100" defaultValue="1" /></div><button className="primary-button" disabled={busy}>Criar campanha</button></form><div className="ad-admin-lists"><div><h3>Campanhas</h3>{campaigns.map((campaign) => <article key={campaign.id}><div><strong>{campaign.title}</strong><span>{campaign.advertiser_name} · {campaign.placement}</span><small>{campaign.impressions} impressões · {campaign.clicks} cliques</small></div><select value={campaign.status} onChange={(event) => void setCampaignStatus(campaign.id, event.target.value as AdCampaign['status'])}><option value="DRAFT">Rascunho</option><option value="ACTIVE">Ativa</option><option value="PAUSED">Pausada</option><option value="ENDED">Encerrada</option></select></article>)}</div><div><h3>Solicitações</h3>{requests.map((request) => <article key={request.id}><div><strong>{request.title}</strong><span>{request.advertiser_name} · {request.contact_email}</span><small>{request.status} · {request.placement}</small></div><a href={request.target_url} target="_blank" rel="noopener noreferrer">Abrir</a></article>)}</div></div></div></section> : null}
+        {isAdmin ? <section className="ad-admin"><header><div><p className="eyebrow">Painel interno</p><h2>Campanhas e solicitações</h2></div><span>Visível apenas para administradores</span></header><div className="ad-admin-layout"><form className="ad-campaign-form" onSubmit={createCampaign}><h3>Nova campanha</h3><input name="advertiser_name" placeholder="Anunciante" required /><input name="title" placeholder="Título" required /><textarea name="body" placeholder="Texto" rows={3} /><input name="image_url" type="url" placeholder="URL da imagem (opcional)" /><input name="target_url" type="url" placeholder="URL de destino" required /><div><select name="placement" defaultValue="FEED"><option value="FEED">Feed</option><option value="EXPLORE">Explorar</option><option value="READER">Leitor</option><option value="SIDEBAR">Sidebar</option></select><select name="status" defaultValue="DRAFT"><option value="DRAFT">Rascunho</option><option value="ACTIVE">Ativa</option></select><input name="weight" type="number" min="1" max="100" defaultValue="1" /></div><button className="primary-button" disabled={busy}>Criar campanha</button></form><div className="ad-admin-lists"><div><h3>Campanhas</h3>{campaigns.map((campaign) => <article key={campaign.id}><div><strong>{campaign.title}</strong><span>{campaign.advertiser_name} · {campaign.placement}</span><small>{campaign.impressions} impressões · {campaign.clicks} cliques</small></div><select value={campaign.status} onChange={(event) => void setCampaignStatus(campaign.id, event.target.value as AdCampaign['status'])}><option value="DRAFT">Rascunho</option><option value="ACTIVE">Ativa</option><option value="PAUSED">Pausada</option><option value="ENDED">Encerrada</option></select></article>)}</div><div><h3>Solicitações</h3>{requests.map((request) => <article key={request.id}><div><strong>{request.title}</strong><span>{request.advertiser_name} · {request.contact_email}</span><small>{request.status} · {request.placement}</small></div><a href={request.target_url} target="_blank" rel="noopener noreferrer">Abrir</a></article>)}</div></div></div></section> : null}
 
         <section className="advertise-footer"><span>✦</span><div><h2>Quer apoiar o projeto sem anunciar?</h2><p>O Archive Nova também possui uma página de apoio direto ao projeto.</p></div><Link className="secondary-button" href="/support">Apoiar Archive Nova</Link></section>
       </main>
