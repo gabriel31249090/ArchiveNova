@@ -659,6 +659,52 @@ begin
 end;
 $$;
 
+create or replace function public.update_chapter(
+  target_chapter uuid,
+  chapter_title text,
+  chapter_content text,
+  chapter_status text default 'PUBLISHED',
+  notes_before_input text default null,
+  notes_after_input text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, auth, pg_temp
+as $
+declare
+  uid uuid := auth.uid();
+  wid uuid;
+  normalized_status text := upper(coalesce(chapter_status, 'PUBLISHED'));
+begin
+  if uid is null then raise exception 'AUTH_REQUIRED' using errcode = '42501'; end if;
+  select c.work_id into wid
+  from public.chapters c
+  join public.works w on w.id = c.work_id
+  where c.id = target_chapter and w.creator_id = uid and w.deleted_at is null;
+  if wid is null then raise exception 'NOT_OWNER' using errcode = '42501'; end if;
+  if normalized_status not in ('DRAFT','SCHEDULED','PUBLISHED') then raise exception 'INVALID_CHAPTER_STATUS'; end if;
+  if btrim(coalesce(chapter_content, '')) = '' then raise exception 'EMPTY_CHAPTER'; end if;
+  if normalized_status = 'SCHEDULED' and not exists (
+    select 1 from public.chapters where id=target_chapter and scheduled_for is not null
+  ) then raise exception 'SCHEDULE_DATE_REQUIRED'; end if;
+
+  update public.chapters
+  set title = nullif(btrim(coalesce(chapter_title, '')), ''),
+      content = chapter_content,
+      status = normalized_status,
+      notes_before = nullif(btrim(coalesce(notes_before_input, '')), ''),
+      notes_after = nullif(btrim(coalesce(notes_after_input, '')), ''),
+      published_at = case when normalized_status='PUBLISHED' then coalesce(published_at,now()) else null end,
+      scheduled_for = case when normalized_status='SCHEDULED' then scheduled_for else null end
+  where id=target_chapter;
+
+  if normalized_status='PUBLISHED' then
+    update public.works set published_at=coalesce(published_at,now()) where id=wid;
+  end if;
+end;
+$;
+
 create or replace function public.schedule_chapter(target_chapter uuid,publish_at timestamptz)
 returns void
 language plpgsql
