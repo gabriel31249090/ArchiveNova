@@ -82,3 +82,7 @@ button:disabled,[aria-disabled="true"]{cursor:not-allowed}
   .category-card:hover,.work-card:hover,.home-v4-shortcuts>a:hover,
   .landing-v4-feature-card:hover{transform:none!important}
 }
+
+.topbar>.primary-button.nova-button-with-icon::after{content:none!important}
+.filter-trigger>span{display:grid;place-items:center}
+.view-tools .icon-button{display:grid;place-items:center}
