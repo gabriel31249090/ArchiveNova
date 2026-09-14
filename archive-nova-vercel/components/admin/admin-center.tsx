@@ -65,6 +65,7 @@ type AdminComment = {
   status: string
   created_at: string
   author_username: string
+  kind: 'WORK' | 'POST'
 }
 
 type ContentPayload = {
@@ -353,7 +354,8 @@ export function AdminCenter({ section }: { section: string }) {
     if (!supabase) return
     const hide = item.status === 'VISIBLE'
     setBusy(item.id)
-    const { error: rpcError } = await supabase.rpc('admin_set_comment_hidden', { target_comment: item.id, hide })
+    const rpcName = item.kind === 'POST' ? 'admin_set_post_comment_hidden' : 'admin_set_comment_hidden'
+    const { error: rpcError } = await supabase.rpc(rpcName, { target_comment: item.id, hide })
     setBusy('')
     if (rpcError) return flash('Não foi possível atualizar o comentário.')
     flash(hide ? 'Comentário ocultado.' : 'Comentário restaurado.')
@@ -467,7 +469,7 @@ export function AdminCenter({ section }: { section: string }) {
             <h3 className="admin-subtitle">Posts recentes</h3>
             <div className="admin-list">{(content.posts || []).map((item) => <article key={item.id}><div><strong>@{item.author_username}</strong><span>{item.body || 'Post sem texto'}</span><small>{dateTime(item.created_at)}</small></div><button className={item.deleted_at ? 'secondary-button' : 'danger-button'} disabled={busy === item.id} onClick={() => void togglePost(item)}>{item.deleted_at ? 'Restaurar' : 'Ocultar'}</button></article>)}</div>
             <h3 className="admin-subtitle">Comentários recentes</h3>
-            <div className="admin-list">{(content.comments || []).map((item) => <article key={item.id}><div><strong>@{item.author_username}</strong><span>{item.body}</span><small>{item.status} · {dateTime(item.created_at)}</small></div><button className={item.status === 'VISIBLE' ? 'danger-button' : 'secondary-button'} disabled={busy === item.id} onClick={() => void toggleComment(item)}>{item.status === 'VISIBLE' ? 'Ocultar' : 'Restaurar'}</button></article>)}</div>
+            <div className="admin-list">{(content.comments || []).map((item) => <article key={item.id}><div><strong>@{item.author_username}</strong><span>{item.body}</span><small>{item.kind === 'POST' ? 'Comentário em post' : 'Comentário em obra'} · {item.status} · {dateTime(item.created_at)}</small></div><button className={item.status === 'VISIBLE' ? 'danger-button' : 'secondary-button'} disabled={busy === item.id} onClick={() => void toggleComment(item)}>{item.status === 'VISIBLE' ? 'Ocultar' : 'Restaurar'}</button></article>)}</div>
           </section> : null}
 
           {currentSection === 'taxonomy' ? <section className="admin-section">
