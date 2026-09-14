@@ -101,3 +101,24 @@ export async function getPublicWorkSitemapEntries() {
     return []
   }
 }
+
+
+export async function getPublicProfileSitemapEntries() {
+  try {
+    const supabase = seoClient()
+    if (!supabase) return [] as Array<{ username: string; updatedAt: string | null }>
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('username,updated_at')
+      .eq('status', 'ACTIVE')
+      .order('updated_at', { ascending: false })
+      .limit(5000)
+    if (error) return []
+    return ((data || []) as Array<Record<string, unknown>>).map((row) => ({
+      username: String(row.username),
+      updatedAt: row.updated_at ? String(row.updated_at) : null,
+    }))
+  } catch {
+    return []
+  }
+}
