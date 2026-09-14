@@ -305,7 +305,7 @@ for insert to authenticated
 with check (
   requester_id = auth.uid()
   and coalesce(
-    (select s.allow_new_ad_requests from public.platform_admin_settings s where s.id = 1),
+    (public.platform_public_settings() ->> 'allow_new_ad_requests')::boolean,
     true
   )
 );
@@ -588,21 +588,35 @@ begin
     'comments', coalesce((
       select jsonb_agg(to_jsonb(x) order by x.created_at desc)
       from (
-        select
-          c.id,
-          left(c.body, 220) as body,
-          c.status,
-          c.created_at,
-          p.username::text as author_username
-        from public.comments c
-        join public.profiles p on p.id = c.user_id
-        order by c.created_at desc
+        select *
+        from (
+          select
+            c.id,
+            left(c.body, 220) as body,
+            c.status,
+            c.created_at,
+            p.username::text as author_username,
+            'WORK'::text as kind
+          from public.comments c
+          join public.profiles p on p.id = c.user_id
+          union all
+          select
+            pc.id,
+            left(pc.body, 220) as body,
+            pc.status,
+            pc.created_at,
+            p.username::text as author_username,
+            'POST'::text as kind
+          from public.post_comments pc
+          join public.profiles p on p.id = pc.user_id
+        ) combined
+        order by created_at desc
         limit greatest(1, least(coalesce(limit_count, 50), 150))
       ) x
     ), '[]'::jsonb)
   );
 end;
-$$;
+$;
 
 create or replace function public.admin_set_work_hidden(target_work uuid, hide boolean default true)
 returns void
@@ -651,7 +665,7 @@ returns void
 language plpgsql
 security definer
 set search_path = public, auth, pg_temp
-as $$
+as $
 begin
   if not public.is_admin() then raise exception 'ADMIN_ONLY' using errcode = '42501'; end if;
 
@@ -665,7 +679,28 @@ begin
   insert into public.audit_log(actor_user_id, action, entity_type, entity_id)
   values(auth.uid(), case when hide then 'COMMENT_ADMIN_HIDDEN' else 'COMMENT_ADMIN_RESTORED' end, 'COMMENT', target_comment);
 end;
-$$;
+$;
+
+create or replace function public.admin_set_post_comment_hidden(target_comment uuid, hide boolean default true)
+returns void
+language plpgsql
+security definer
+set search_path = public, auth, pg_temp
+as $
+begin
+  if not public.is_admin() then raise exception 'ADMIN_ONLY' using errcode = '42501'; end if;
+
+  update public.post_comments
+  set status = case when hide then 'HIDDEN' else 'VISIBLE' end,
+      updated_at = now()
+  where id = target_comment;
+
+  if not found then raise exception 'POST_COMMENT_NOT_FOUND' using errcode = 'P0002'; end if;
+
+  insert into public.audit_log(actor_user_id, action, entity_type, entity_id)
+  values(auth.uid(), case when hide then 'POST_COMMENT_ADMIN_HIDDEN' else 'POST_COMMENT_ADMIN_RESTORED' end, 'POST_COMMENT', target_comment);
+end;
+$;
 
 -- -----------------------------------------------------------------------------
 -- 7. Taxonomy administration
@@ -793,12 +828,18 @@ returns void
 language plpgsql
 security definer
 set search_path = public, auth, pg_temp
-as $$
+as $
+declare
+  source_type text;
+  target_type text;
 begin
   if not public.is_admin() then raise exception 'ADMIN_ONLY' using errcode = '42501'; end if;
   if source_tag = target_tag then raise exception 'SAME_TAG'; end if;
-  if not exists(select 1 from public.tags where id = source_tag) then raise exception 'SOURCE_TAG_NOT_FOUND'; end if;
-  if not exists(select 1 from public.tags where id = target_tag) then raise exception 'TARGET_TAG_NOT_FOUND'; end if;
+  select type into source_type from public.tags where id = source_tag;
+  select type into target_type from public.tags where id = target_tag;
+  if source_type is null then raise exception 'SOURCE_TAG_NOT_FOUND'; end if;
+  if target_type is null then raise exception 'TARGET_TAG_NOT_FOUND'; end if;
+  if source_type <> target_type then raise exception 'TAG_TYPE_MISMATCH'; end if;
 
   insert into public.work_tags(work_id, tag_id)
   select wt.work_id, target_tag
@@ -965,6 +1006,7 @@ revoke execute on function public.admin_content(integer) from public;
 revoke execute on function public.admin_set_work_hidden(uuid,boolean) from public;
 revoke execute on function public.admin_set_post_hidden(uuid,boolean) from public;
 revoke execute on function public.admin_set_comment_hidden(uuid,boolean) from public;
+revoke execute on function public.admin_set_post_comment_hidden(uuid,boolean) from public;
 revoke execute on function public.admin_taxonomy(text,integer) from public;
 revoke execute on function public.admin_rename_fandom(uuid,text) from public;
 revoke execute on function public.admin_rename_tag(uuid,text) from public;
@@ -982,6 +1024,7 @@ grant execute on function public.admin_content(integer) to authenticated;
 grant execute on function public.admin_set_work_hidden(uuid,boolean) to authenticated;
 grant execute on function public.admin_set_post_hidden(uuid,boolean) to authenticated;
 grant execute on function public.admin_set_comment_hidden(uuid,boolean) to authenticated;
+grant execute on function public.admin_set_post_comment_hidden(uuid,boolean) to authenticated;
 grant execute on function public.admin_taxonomy(text,integer) to authenticated;
 grant execute on function public.admin_rename_fandom(uuid,text) to authenticated;
 grant execute on function public.admin_rename_tag(uuid,text) to authenticated;
