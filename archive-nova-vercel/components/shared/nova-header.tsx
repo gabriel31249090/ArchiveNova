@@ -42,9 +42,10 @@ export function NovaHeader({ title }: { title?: string }) {
       setUnread(notificationResponse.count || 0)
     }
 
-    void client.from('platform_admin_settings').select('announcement_enabled,announcement_text').eq('id', 1).maybeSingle().then(({ data }) => {
+    void client.rpc('platform_public_settings').then(({ data }) => {
       if (!active) return
-      setAnnouncement(data?.announcement_enabled && data?.announcement_text ? String(data.announcement_text) : '')
+      const settings = (data || {}) as { announcement_enabled?: boolean; announcement_text?: string | null }
+      setAnnouncement(settings.announcement_enabled && settings.announcement_text ? String(settings.announcement_text) : '')
     })
 
     void hydrate()
