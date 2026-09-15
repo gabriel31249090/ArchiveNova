@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server'
-import mammoth from 'mammoth'
-import { PDFParse } from 'pdf-parse'
 import sanitizeHtml from 'sanitize-html'
 
 export const runtime = 'nodejs'
@@ -209,6 +207,7 @@ export async function POST(request: Request) {
     let html = '<p></p>'
 
     if (extension === 'docx') {
+      const mammoth = (await import('mammoth')).default
       const result = await mammoth.convertToHtml(
         { buffer: Buffer.from(bytes) },
         {
@@ -221,6 +220,7 @@ export async function POST(request: Request) {
       html = result.value
       warnings.push(...result.messages.map((message) => message.message).filter(Boolean))
     } else if (extension === 'pdf') {
+      const { PDFParse } = await import('pdf-parse')
       const parser = new PDFParse({ data: Buffer.from(bytes) })
       try {
         const result = await parser.getText()
