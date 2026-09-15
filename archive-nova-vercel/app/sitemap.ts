@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next'
 import { absoluteUrl } from '@/lib/site'
 import { getPublicListSitemapEntries, getPublicProfileSitemapEntries, getPublicTaxonomySitemapEntries, getPublicWorkSitemapEntries } from '@/lib/seo-public'
+import { getClassicsCatalog } from '@/lib/classics'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,12 +11,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: absoluteUrl('/explore'), changeFrequency: 'daily', priority: 0.9 },
     { url: absoluteUrl('/feed'), changeFrequency: 'daily', priority: 0.8 },
     { url: absoluteUrl('/posts'), changeFrequency: 'daily', priority: 0.7 },
+    { url: absoluteUrl('/classics'), changeFrequency: 'weekly', priority: 0.75 },
+    { url: absoluteUrl('/trust'), changeFrequency: 'monthly', priority: 0.65 },
     { url: absoluteUrl('/faq'), changeFrequency: 'monthly', priority: 0.6 },
     { url: absoluteUrl('/support'), changeFrequency: 'monthly', priority: 0.5 },
     { url: absoluteUrl('/advertise'), changeFrequency: 'monthly', priority: 0.4 },
   ]
-  const [works,profiles,taxonomies,lists]=await Promise.all([
-    getPublicWorkSitemapEntries(),getPublicProfileSitemapEntries(),getPublicTaxonomySitemapEntries(),getPublicListSitemapEntries(),
+  const [works,profiles,taxonomies,lists,classics]=await Promise.all([
+    getPublicWorkSitemapEntries(),getPublicProfileSitemapEntries(),getPublicTaxonomySitemapEntries(),getPublicListSitemapEntries(),getClassicsCatalog(),
   ])
   const workRoutes:MetadataRoute.Sitemap=works.map(work=>({url:absoluteUrl('/works/'+encodeURIComponent(work.id)),lastModified:work.updatedAt?new Date(work.updatedAt):undefined,changeFrequency:'weekly',priority:0.8}))
   const profileRoutes:MetadataRoute.Sitemap=profiles.map(profile=>({url:absoluteUrl('/users/'+encodeURIComponent(profile.username)),lastModified:profile.updatedAt?new Date(profile.updatedAt):undefined,changeFrequency:'weekly',priority:0.6}))
@@ -24,5 +27,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     return {url:absoluteUrl('/'+base+'/'+encodeURIComponent(item.slug)),lastModified:item.updatedAt?new Date(item.updatedAt):undefined,changeFrequency:'weekly',priority:0.65}
   })
   const listRoutes:MetadataRoute.Sitemap=lists.map(item=>({url:absoluteUrl('/'+item.kind+'/'+encodeURIComponent(item.id)),lastModified:item.updatedAt?new Date(item.updatedAt):undefined,changeFrequency:'weekly',priority:0.55}))
-  return [...staticRoutes,...workRoutes,...profileRoutes,...taxonomyRoutes,...listRoutes]
+  const classicRoutes:MetadataRoute.Sitemap=classics.map(item=>({url:absoluteUrl('/classics/'+encodeURIComponent(item.slug)),lastModified:item.updated_at?new Date(item.updated_at):undefined,changeFrequency:'monthly',priority:0.72}))
+  return [...staticRoutes,...workRoutes,...profileRoutes,...taxonomyRoutes,...listRoutes,...classicRoutes]
 }

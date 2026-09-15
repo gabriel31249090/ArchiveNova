@@ -1,12 +1,13 @@
 {
   "name": "archive-nova",
-  "version": "4.7.0",
+  "version": "4.8.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "import:classics": "node scripts/import-classics.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

@@ -74,6 +74,7 @@ export function NovaHeader({ title }: { title?: string }) {
           <Link href="/explore" onClick={() => setMenuOpen(false)}>Explorar</Link>
           <Link href="/feed" onClick={() => setMenuOpen(false)}>Feed</Link>
           <Link href="/posts" onClick={() => setMenuOpen(false)}>Posts</Link>
+          <Link href="/classics" onClick={() => setMenuOpen(false)}>Classics</Link>
           {user ? <Link href="/library" onClick={() => setMenuOpen(false)}>Biblioteca</Link> : null}
           {user ? <Link href="/collaboration" onClick={() => setMenuOpen(false)}>Colaboração</Link> : null}
           {user ? <Link href="/dashboard" onClick={() => setMenuOpen(false)}>Studio</Link> : null}
@@ -81,6 +82,7 @@ export function NovaHeader({ title }: { title?: string }) {
           {profile?.role === 'ADMIN' ? <Link href="/admin" onClick={() => setMenuOpen(false)}>Admin Center</Link> : null}
           {profile?.role === 'MODERATOR' || profile?.role === 'ADMIN' ? <Link href="/moderation" onClick={() => setMenuOpen(false)}>Moderação</Link> : null}
           <Link href="/faq" onClick={() => setMenuOpen(false)}>FAQ</Link>
+          {user ? <Link href="/sac" onClick={() => setMenuOpen(false)}>SAC</Link> : null}
           {user ? <Link href={profileHref} onClick={() => setMenuOpen(false)}>Perfil</Link> : null}
         </nav>
         <div className="nova-header-actions">

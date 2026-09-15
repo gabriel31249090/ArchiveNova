@@ -6,6 +6,7 @@ import { PwaRegistrar } from '@/components/pwa/pwa-registrar'
 import './globals.css'
 import './community-v4.css'
 import './design-system.css'
+import './novadrop-v48.css'
 
 const siteUrl = getSiteUrl()
 const googleVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim()
