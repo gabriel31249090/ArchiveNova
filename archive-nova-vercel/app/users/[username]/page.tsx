@@ -3,6 +3,7 @@ import { PublicProfilePage } from '@/components/profile/public-profile-page'
 import { JsonLd } from '@/components/seo/json-ld'
 import { absoluteUrl } from '@/lib/site'
 import { cleanDescription, getPublicProfileSeo } from '@/lib/seo-public'
+import '../../novadrop-v47-shared.css'
 
 type UserRouteProps = { params: Promise<{ username: string }> }
 
