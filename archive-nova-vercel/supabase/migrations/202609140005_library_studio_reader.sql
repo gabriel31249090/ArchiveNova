@@ -733,7 +733,7 @@ returns void language plpgsql security definer set search_path=public,auth,pg_te
 begin
   delete from public.series where id=target_series and owner_id=auth.uid();
   if not found then raise exception 'SERIES_NOT_FOUND' using errcode='P0002'; end if;
-end; $;
+end; $$;
 
 create or replace function public.update_collection_info(
   target_collection uuid,next_name text,next_description text,next_visibility text
@@ -746,14 +746,14 @@ begin
     visibility=normalized,updated_at=now()
   where id=target_collection and owner_id=auth.uid();
   if not found then raise exception 'COLLECTION_NOT_FOUND' using errcode='P0002'; end if;
-end; $;
+end; $$;
 
 create or replace function public.delete_collection(target_collection uuid)
 returns void language plpgsql security definer set search_path=public,auth,pg_temp as $$
 begin
   delete from public.collections where id=target_collection and owner_id=auth.uid();
   if not found then raise exception 'COLLECTION_NOT_FOUND' using errcode='P0002'; end if;
-end; $;
+end; $$;
 
 create or replace function public.update_shelf_info(
   target_shelf uuid,next_name text,next_description text,next_visibility text
@@ -766,7 +766,7 @@ begin
     visibility=normalized,updated_at=now()
   where id=target_shelf and owner_id=auth.uid();
   if not found then raise exception 'SHELF_NOT_FOUND' using errcode='P0002'; end if;
-end; $;
+end; $$;
 
 create or replace function public.reorder_shelf_works(target_shelf uuid, ordered_work_ids uuid[])
 returns void language plpgsql security definer set search_path=public,auth,pg_temp as $$
@@ -782,14 +782,14 @@ begin
     update public.shelf_items set position=pos where shelf_id=target_shelf and work_id=item;
   end loop;
   update public.shelves set updated_at=now() where id=target_shelf;
-end; $;
+end; $$;
 
 create or replace function public.delete_shelf(target_shelf uuid)
 returns void language plpgsql security definer set search_path=public,auth,pg_temp as $$
 begin
   delete from public.shelves where id=target_shelf and owner_id=auth.uid();
   if not found then raise exception 'SHELF_NOT_FOUND' using errcode='P0002'; end if;
-end; $;
+end; $$;
 
 -- -----------------------------------------------------------------------------
 -- Chapter version history
@@ -1200,7 +1200,7 @@ begin
            when undefined_object then raise notice 'supabase_realtime publication is not available';
            when insufficient_privilege then raise notice 'Could not add draft comments to realtime publication';
   end;
-end $;
+end $$;
 
 create or replace function public.can_edit_draft(target_draft uuid)
 returns boolean
