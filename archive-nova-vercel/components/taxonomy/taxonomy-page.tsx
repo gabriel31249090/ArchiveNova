@@ -8,6 +8,7 @@ import { NovaIcon } from '@/components/ui/nova-icon'
 import { WorkCard } from '@/components/work-card'
 import { normalizeWorkCard } from '@/lib/work-normalize'
 import { compactNumber, fullNumber } from '@/lib/format'
+import { useFeatureFlags } from '@/hooks/use-feature-flags'
 import type { WorkCardData } from '@/lib/types'
 
 type Kind='FANDOM'|'TAG'|'CHARACTER'|'RELATIONSHIP'
@@ -35,6 +36,8 @@ export function TaxonomyPage({slug,kind}:{slug:string;kind:Kind}){
   const [loading,setLoading]=useState(true)
   const [error,setError]=useState('')
   const [layout,setLayout]=useState<'grid'|'list'>('grid')
+  const { flags }=useFeatureFlags()
+  const hubsEnabled=flags.fandom_hubs!==false
 
   const load=useCallback(async()=>{
     setLoading(true);setError('')
@@ -69,19 +72,19 @@ export function TaxonomyPage({slug,kind}:{slug:string;kind:Kind}){
     <main className="taxonomy-public-page taxonomy-hub-v47">
       <header className="taxonomy-public-hero taxonomy-hub-hero-v47">
         <div><p className="eyebrow">{label} Hub</p><h1>{payload.taxonomy.name}</h1><p>{payload.taxonomy.description||'Índice comunitário do Archive Nova, construído a partir das histórias publicadas.'}</p></div>
-        <div className="taxonomy-hub-stats-v47">
+        {hubsEnabled?<div className="taxonomy-hub-stats-v47">
           <div><strong>{fullNumber(stats.works??works.length)}</strong><span>obras</span></div>
           <div><strong>{compactNumber(stats.words||0)}</strong><span>palavras</span></div>
           <div><strong>{compactNumber(stats.kudos||0)}</strong><span>kudos</span></div>
           {stats.authors!=null?<div><strong>{fullNumber(stats.authors)}</strong><span>autores</span></div>:null}
-        </div>
+        </div>:null}
       </header>
 
-      {related.length?<section className="taxonomy-hub-strip-v47"><header><p className="eyebrow">Conexões</p><h2>Tags relacionadas</h2></header><div>{related.map(item=><Link key={item.id} href={pathForTaxonomy(item)}><strong>{item.name}</strong><small>{item.work_count} obras</small></Link>)}</div></section>:null}
+      {hubsEnabled&&related.length?<section className="taxonomy-hub-strip-v47"><header><p className="eyebrow">Conexões</p><h2>Tags relacionadas</h2></header><div>{related.map(item=><Link key={item.id} href={pathForTaxonomy(item)}><strong>{item.name}</strong><small>{item.work_count} obras</small></Link>)}</div></section>:null}
 
-      {fandoms.length?<section className="taxonomy-hub-strip-v47"><header><p className="eyebrow">Universos relacionados</p><h2>Fandoms onde aparece</h2></header><div>{fandoms.map(item=><Link key={item.id} href={'/fandoms/'+encodeURIComponent(item.slug)}><strong>{item.name}</strong><small>{item.work_count} obras</small></Link>)}</div></section>:null}
+      {hubsEnabled&&fandoms.length?<section className="taxonomy-hub-strip-v47"><header><p className="eyebrow">Universos relacionados</p><h2>Fandoms onde aparece</h2></header><div>{fandoms.map(item=><Link key={item.id} href={'/fandoms/'+encodeURIComponent(item.slug)}><strong>{item.name}</strong><small>{item.work_count} obras</small></Link>)}</div></section>:null}
 
-      {authors.length?<section className="taxonomy-authors-v47"><header><p className="eyebrow">Criadores</p><h2>Autores recentes neste fandom</h2></header><div>{authors.map(author=><Link href={'/users/'+encodeURIComponent(author.username)} key={author.id}>{author.avatar_url?<img src={author.avatar_url} alt=""/>:<span>{author.display_name.slice(0,1).toUpperCase()}</span>}<div><strong>{author.display_name}</strong><small>@{author.username} · {author.work_count} obras</small></div><NovaIcon name="arrowRight" size={15}/></Link>)}</div></section>:null}
+      {hubsEnabled&&authors.length?<section className="taxonomy-authors-v47"><header><p className="eyebrow">Criadores</p><h2>Autores recentes neste fandom</h2></header><div>{authors.map(author=><Link href={'/users/'+encodeURIComponent(author.username)} key={author.id}>{author.avatar_url?<img src={author.avatar_url} alt=""/>:<span>{author.display_name.slice(0,1).toUpperCase()}</span>}<div><strong>{author.display_name}</strong><small>@{author.username} · {author.work_count} obras</small></div><NovaIcon name="arrowRight" size={15}/></Link>)}</div></section>:null}
 
       <section className="taxonomy-hub-works-v47">
         <header><div><p className="eyebrow">Histórias</p><h2>{works.length} {works.length===1?'obra publicada':'obras publicadas'}</h2></div><div className="segmented"><button className={layout==='grid'?'active':''} onClick={()=>setLayout('grid')} aria-label="Grade"><NovaIcon name="grid" size={17}/></button><button className={layout==='list'?'active':''} onClick={()=>setLayout('list')} aria-label="Lista"><NovaIcon name="list" size={17}/></button></div></header>
