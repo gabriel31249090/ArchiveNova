@@ -596,3 +596,19 @@ grant execute on function public.writer_beta_leave_feedback(uuid,uuid,text,text)
 grant execute on function public.creator_comment_center(integer) to authenticated;
 grant execute on function public.creator_reply_comment(uuid,text) to authenticated;
 grant execute on function public.publish_writer_draft(uuid,text,text,text,text,text[],text[],integer,text,boolean) to authenticated;
+
+
+create or replace function public.writer_consume_import_rate_limit()
+returns void
+language plpgsql
+security definer
+set search_path=public,auth,pg_temp
+as $$
+declare uid uuid:=auth.uid();
+begin
+  if uid is null then raise exception 'AUTH_REQUIRED' using errcode='42501'; end if;
+  perform public.consume_rate_limit(uid,'DOCUMENT_IMPORT',6,600,null);
+end $$;
+
+revoke execute on function public.writer_consume_import_rate_limit() from public,anon;
+grant execute on function public.writer_consume_import_rate_limit() to authenticated;
