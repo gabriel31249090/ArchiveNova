@@ -61,7 +61,7 @@ returns void
 language plpgsql
 security definer
 set search_path=public,pg_temp
-as $
+as $$
 declare
   recent_count integer;
   fingerprint text := case when nullif(btrim(coalesce(payload,'')),'') is null then null else md5(lower(btrim(payload))) end;
@@ -90,14 +90,14 @@ begin
   delete from public.rate_limit_events
   where created_at < now()-interval '24 hours';
 end;
-$;
+$$;
 
 create or replace function public.guard_archive_writes()
 returns trigger
 language plpgsql
 security definer
 set search_path=public,pg_temp
-as $
+as $$
 begin
   if tg_table_name='comments' then
     perform public.consume_rate_limit(new.user_id,'WORK_COMMENT',8,60,new.body);
@@ -112,7 +112,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 
 drop trigger if exists comments_archive_guard on public.comments;
 create trigger comments_archive_guard before insert on public.comments
@@ -271,7 +271,7 @@ begin
       updated_at = now()
   where user_id = uid and work_id = target_work;
 end;
-$;
+$$;
 
 create or replace function public.get_reading_progress(target_work uuid)
 returns jsonb
@@ -652,7 +652,7 @@ returns jsonb
 language plpgsql
 stable
 set search_path = public, pg_temp
-as $
+as $$
 declare
   work_json jsonb;
   chapters_json jsonb;
@@ -683,7 +683,7 @@ begin
 
   return jsonb_build_object('work',work_json,'chapters',chapters_json);
 end;
-$;
+$$;
 
 create or replace function public.update_series_info(
   target_series uuid,
@@ -695,7 +695,7 @@ returns void
 language plpgsql
 security definer
 set search_path=public,auth,pg_temp
-as $
+as $$
 declare normalized text:=upper(coalesce(next_visibility,'PUBLIC'));
 begin
   if normalized not in ('PUBLIC','UNLISTED','PRIVATE') then raise exception 'INVALID_VISIBILITY'; end if;
@@ -704,14 +704,14 @@ begin
   where id=target_series and owner_id=auth.uid();
   if not found then raise exception 'SERIES_NOT_FOUND' using errcode='P0002'; end if;
 end;
-$;
+$$;
 
 create or replace function public.reorder_series_works(target_series uuid, ordered_work_ids uuid[])
 returns void
 language plpgsql
 security definer
 set search_path=public,auth,pg_temp
-as $
+as $$
 declare expected integer; supplied integer; item uuid; pos integer:=0;
 begin
   if not exists(select 1 from public.series where id=target_series and owner_id=auth.uid()) then raise exception 'SERIES_NOT_FOUND' using errcode='P0002'; end if;
@@ -726,10 +726,10 @@ begin
   end loop;
   update public.series set updated_at=now() where id=target_series;
 end;
-$;
+$$;
 
 create or replace function public.delete_series(target_series uuid)
-returns void language plpgsql security definer set search_path=public,auth,pg_temp as $
+returns void language plpgsql security definer set search_path=public,auth,pg_temp as $$
 begin
   delete from public.series where id=target_series and owner_id=auth.uid();
   if not found then raise exception 'SERIES_NOT_FOUND' using errcode='P0002'; end if;
@@ -738,7 +738,7 @@ end; $;
 create or replace function public.update_collection_info(
   target_collection uuid,next_name text,next_description text,next_visibility text
 )
-returns void language plpgsql security definer set search_path=public,auth,pg_temp as $
+returns void language plpgsql security definer set search_path=public,auth,pg_temp as $$
 declare normalized text:=upper(coalesce(next_visibility,'PUBLIC'));
 begin
   if normalized not in ('PUBLIC','UNLISTED','PRIVATE') then raise exception 'INVALID_VISIBILITY'; end if;
@@ -749,7 +749,7 @@ begin
 end; $;
 
 create or replace function public.delete_collection(target_collection uuid)
-returns void language plpgsql security definer set search_path=public,auth,pg_temp as $
+returns void language plpgsql security definer set search_path=public,auth,pg_temp as $$
 begin
   delete from public.collections where id=target_collection and owner_id=auth.uid();
   if not found then raise exception 'COLLECTION_NOT_FOUND' using errcode='P0002'; end if;
@@ -758,7 +758,7 @@ end; $;
 create or replace function public.update_shelf_info(
   target_shelf uuid,next_name text,next_description text,next_visibility text
 )
-returns void language plpgsql security definer set search_path=public,auth,pg_temp as $
+returns void language plpgsql security definer set search_path=public,auth,pg_temp as $$
 declare normalized text:=upper(coalesce(next_visibility,'PUBLIC'));
 begin
   if normalized not in ('PUBLIC','UNLISTED','PRIVATE') then raise exception 'INVALID_VISIBILITY'; end if;
@@ -769,7 +769,7 @@ begin
 end; $;
 
 create or replace function public.reorder_shelf_works(target_shelf uuid, ordered_work_ids uuid[])
-returns void language plpgsql security definer set search_path=public,auth,pg_temp as $
+returns void language plpgsql security definer set search_path=public,auth,pg_temp as $$
 declare expected integer; supplied integer; item uuid; pos integer:=0;
 begin
   if not exists(select 1 from public.shelves where id=target_shelf and owner_id=auth.uid()) then raise exception 'SHELF_NOT_FOUND' using errcode='P0002'; end if;
@@ -785,7 +785,7 @@ begin
 end; $;
 
 create or replace function public.delete_shelf(target_shelf uuid)
-returns void language plpgsql security definer set search_path=public,auth,pg_temp as $
+returns void language plpgsql security definer set search_path=public,auth,pg_temp as $$
 begin
   delete from public.shelves where id=target_shelf and owner_id=auth.uid();
   if not found then raise exception 'SHELF_NOT_FOUND' using errcode='P0002'; end if;
@@ -920,7 +920,7 @@ returns void
 language plpgsql
 security definer
 set search_path = public, auth, pg_temp
-as $
+as $$
 declare
   uid uuid := auth.uid();
   wid uuid;
@@ -952,7 +952,7 @@ begin
     update public.works set published_at=coalesce(published_at,now()) where id=wid;
   end if;
 end;
-$;
+$$;
 
 create or replace function public.schedule_chapter(target_chapter uuid,publish_at timestamptz)
 returns void
@@ -1085,7 +1085,7 @@ returns trigger
 language plpgsql
 security definer
 set search_path=public,pg_temp
-as $
+as $$
 declare allowed boolean;
 begin
   select case
@@ -1104,7 +1104,7 @@ begin
   if coalesce(allowed,true)=false then return null; end if;
   return new;
 end;
-$;
+$$;
 
 drop trigger if exists notifications_respect_preferences on public.notifications;
 create trigger notifications_respect_preferences
@@ -1192,7 +1192,7 @@ create table if not exists public.draft_inline_comments (
 alter table public.draft_collaborators enable row level security;
 alter table public.draft_inline_comments enable row level security;
 
-do $
+do $$
 begin
   begin
     alter publication supabase_realtime add table public.draft_inline_comments;
