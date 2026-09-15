@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import '../novadrop-v47.css'
 import { PersonalizedHome } from '@/components/home/personalized-home'
 
 export const metadata: Metadata = {
