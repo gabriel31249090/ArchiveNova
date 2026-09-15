@@ -47,9 +47,9 @@ begin
   if clean_banner is not null and clean_banner !~* '^https?://' then raise exception 'INVALID_BANNER_URL'; end if;
   if clean_website is not null and clean_website !~* '^https?://' then raise exception 'INVALID_WEBSITE_URL'; end if;
 
-  select coalesce(array_agg(distinct left(btrim(x),120)) filter(where btrim(x)<>''),array[]::text[])
+  select coalesce(array_agg(distinct left(btrim(u.value),120)) filter(where btrim(u.value)<>''),array[]::text[])
   into clean_fandoms
-  from unnest(coalesce(next_favorite_fandoms,array[]::text[])) x;
+  from unnest(coalesce(next_favorite_fandoms,array[]::text[])) as u(value);
 
   if cardinality(clean_fandoms)>12 then
     clean_fandoms:=clean_fandoms[1:12];
