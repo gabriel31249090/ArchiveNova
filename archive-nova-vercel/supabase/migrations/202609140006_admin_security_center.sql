@@ -75,7 +75,7 @@ begin
 end;
 $$;
 
-do $
+do $$
 declare
   table_name text;
 begin
@@ -100,7 +100,7 @@ begin
     end if;
   end loop;
 end;
-$;
+$$;
 
 -- Public content from suspended/deleted creators disappears for normal readers,
 -- while the owner and staff can still inspect it.
