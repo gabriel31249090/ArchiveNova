@@ -12,6 +12,7 @@ type Props = SVGProps<SVGSVGElement> & {
   name: NovaIconName
   size?: number
   strokeWidth?: number
+  variant?: 'outline' | 'solid'
 }
 
 const paths: Record<NovaIconName, ReactNode> = {
@@ -57,13 +58,16 @@ const paths: Record<NovaIconName, ReactNode> = {
   flag: <><path d="M5 21V4"/><path d="M5 5h10l-1 4 1 4H5"/></>,
 }
 
-export function NovaIcon({ name, size = 20, strokeWidth = 1.8, ...props }: Props) {
+export function NovaIcon({ name, size = 20, strokeWidth = 1.8, variant = 'outline', ...props }: Props) {
+  const supportsSolid = name === 'heart' || name === 'bookmark'
+  const iconFill = variant === 'solid' && supportsSolid ? 'currentColor' : 'none'
+
   return (
     <svg
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      fill="none"
+      fill={iconFill}
       stroke="currentColor"
       strokeWidth={strokeWidth}
       strokeLinecap="round"
