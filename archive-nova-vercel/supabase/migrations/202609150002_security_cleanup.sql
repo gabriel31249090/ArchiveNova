@@ -107,6 +107,7 @@ declare
   insert_name text;
   update_name text;
   delete_name text;
+  effective_check text;
 begin
   for r in
     select p.schemaname,p.tablename,p.policyname,p.roles,p.qual,p.with_check
@@ -122,9 +123,11 @@ begin
           and s.policyname<>p.policyname
       )
   loop
-    select string_agg(quote_ident(role_name),',')
+    select string_agg(quote_ident(x.role_name::text),',')
     into roles_sql
-    from unnest(r.roles) role_name;
+    from unnest(r.roles) as x(role_name);
+
+    effective_check:=coalesce(r.with_check,r.qual);
 
     insert_name:=left(r.policyname||'_insert',63);
     update_name:=left(r.policyname||'_update',63);
@@ -135,18 +138,18 @@ begin
       r.policyname,r.schemaname,r.tablename
     );
 
-    if r.with_check is not null then
+    if effective_check is not null then
       execute format(
         'create policy %I on %I.%I for insert to %s with check (%s)',
-        insert_name,r.schemaname,r.tablename,roles_sql,r.with_check
+        insert_name,r.schemaname,r.tablename,roles_sql,effective_check
       );
     end if;
 
     if r.qual is not null then
-      if r.with_check is not null then
+      if effective_check is not null then
         execute format(
           'create policy %I on %I.%I for update to %s using (%s) with check (%s)',
-          update_name,r.schemaname,r.tablename,roles_sql,r.qual,r.with_check
+          update_name,r.schemaname,r.tablename,roles_sql,r.qual,effective_check
         );
       else
         execute format(
