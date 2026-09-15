@@ -20,7 +20,7 @@ function normalizeWork(row: Record<string, unknown>): WorkCardData {
 function formatNumber(value: number) { return new Intl.NumberFormat('pt-BR', { notation: value >= 10000 ? 'compact' : 'standard', maximumFractionDigits: 1 }).format(value || 0) }
 
 type ProfilePayload = {
-  profile: { id: string; username: string; display_name: string | null; bio: string | null; created_at: string }
+  profile: { id: string; username: string; display_name: string | null; bio: string | null; created_at: string; role?: 'USER' | 'MODERATOR' | 'ADMIN' }
   stats: { works: number; words: number; hits: number; kudos: number; followers: number }
   viewer: { is_self: boolean; following: boolean; blocked: boolean }
   works: Record<string, unknown>[]
@@ -56,13 +56,15 @@ export function PublicProfilePage({ username }: { username: string }) {
       return
     }
     const next = data as ProfilePayload
-    setPayload(next)
     setWorks((next.works || []).map(normalizeWork))
-    const [calendarResponse, supportResponse, postResponse] = await Promise.all([
+    const [calendarResponse, supportResponse, postResponse, roleResponse] = await Promise.all([
       supabase.rpc('profile_contribution_calendar', { profile_username: next.profile.username }),
       supabase.from('creator_support_profiles').select('*').eq('user_id', next.profile.id).maybeSingle(),
       supabase.from('community_posts').select('id,body,image_urls,likes_count,comments_count,created_at').eq('author_id', next.profile.id).is('deleted_at', null).order('created_at', { ascending: false }).limit(4),
+      supabase.from('profiles').select('role').eq('id', next.profile.id).maybeSingle(),
     ])
+    const publicRole = String(roleResponse.data?.role || 'USER') as 'USER' | 'MODERATOR' | 'ADMIN'
+    setPayload({ ...next, profile: { ...next.profile, role: publicRole } })
     setCalendar(((calendarResponse.data || []) as Array<Record<string, unknown>>).map((row) => ({ date: String(row.date || ''), count: Number(row.count || 0) })))
     setSupport(supportResponse.data ? supportResponse.data as SupportProfile : null)
     setPosts((postResponse.data || []) as ProfilePost[])
@@ -122,9 +124,9 @@ export function PublicProfilePage({ username }: { username: string }) {
         <section className="profile-cover"><div className="profile-orbit one" /><div className="profile-orbit two" /></section>
         <section className="profile-hero">
           <div className="profile-avatar-large">{(profile.display_name || profile.username).slice(0, 1).toUpperCase()}<i>✦</i></div>
-          <div className="profile-identity"><p className="eyebrow">Perfil público</p><h1>{profile.display_name || profile.username}</h1><span>@{profile.username}</span><p className="profile-bio">{profile.bio || 'Este autor ainda não escreveu uma bio.'}</p><small>No Archive Nova desde {joined}.</small></div>
+          <div className="profile-identity"><p className="eyebrow">Perfil público</p><h1>{profile.display_name || profile.username}</h1><div className="profile-handle-row"><span>@{profile.username}</span>{profile.role === 'ADMIN' ? <b className="profile-role-badge admin">✦ Administrador</b> : profile.role === 'MODERATOR' ? <b className="profile-role-badge moderator">◆ Moderador</b> : null}</div><p className="profile-bio">{profile.bio || 'Este autor ainda não escreveu uma bio.'}</p><small>No Archive Nova desde {joined}.</small></div>
           <div className="profile-actions">
-            {viewer.is_self ? <div className="profile-self-actions"><Link className="primary-button large" href="/dashboard">Abrir Creator Studio</Link><Link className="secondary-button large" href="/settings/profile">Editar perfil</Link><Link className="secondary-button large" href="/settings/support">Configurar apoio</Link></div> : <div className="profile-self-actions"><button className={`primary-button large ${viewer.following ? 'following' : ''}`} disabled={busy || viewer.blocked} onClick={toggleFollow}>{viewer.following ? <><NovaIcon name="check" size={16} /> Seguindo</> : <><NovaIcon name="plus" size={16} /> Seguir autor</>}</button>{support?.enabled ? <Link className="secondary-button large support-profile-button" href={`/support/${encodeURIComponent(profile.username)}`}><NovaIcon name="heart" size={16} /> Apoiar</Link> : null}</div>}
+            {viewer.is_self ? <div className="profile-self-actions">{profile.role === 'ADMIN' ? <Link className="primary-button large" href="/admin">Abrir Admin Center</Link> : null}<Link className="primary-button large" href="/dashboard">Abrir Creator Studio</Link><Link className="secondary-button large" href="/settings/profile">Editar perfil</Link><Link className="secondary-button large" href="/settings/support">Configurar apoio</Link></div> : <div className="profile-self-actions"><button className={`primary-button large ${viewer.following ? 'following' : ''}`} disabled={busy || viewer.blocked} onClick={toggleFollow}>{viewer.following ? <><NovaIcon name="check" size={16} /> Seguindo</> : <><NovaIcon name="plus" size={16} /> Seguir autor</>}</button>{support?.enabled ? <Link className="secondary-button large support-profile-button" href={`/support/${encodeURIComponent(profile.username)}`}><NovaIcon name="heart" size={16} /> Apoiar</Link> : null}</div>}
             {!viewer.is_self && user ? <button className="profile-more-button" type="button" onClick={toggleBlock} disabled={busy}>{viewer.blocked ? 'Desbloquear' : 'Bloquear'}</button> : null}
           </div>
         </section>

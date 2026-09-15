@@ -17,6 +17,7 @@ export function NovaHeader({ title }: { title?: string }) {
   const [profile, setProfile] = useState<MiniProfile | null>(null)
   const [unread, setUnread] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [announcement, setAnnouncement] = useState('')
 
   useEffect(() => {
     if (!supabase) return
@@ -40,6 +41,12 @@ export function NovaHeader({ title }: { title?: string }) {
       if (profileResponse.data) setProfile(profileResponse.data as MiniProfile)
       setUnread(notificationResponse.count || 0)
     }
+
+    void client.rpc('platform_public_settings').then(({ data }) => {
+      if (!active) return
+      const settings = (data || {}) as { announcement_enabled?: boolean; announcement_text?: string | null }
+      setAnnouncement(settings.announcement_enabled && settings.announcement_text ? String(settings.announcement_text) : '')
+    })
 
     void hydrate()
     const { data } = client.auth.onAuthStateChange((_event, session) => void hydrate(session?.user || null))
@@ -71,6 +78,7 @@ export function NovaHeader({ title }: { title?: string }) {
           {user ? <Link href="/collaboration" onClick={() => setMenuOpen(false)}>Colaboração</Link> : null}
           {user ? <Link href="/dashboard" onClick={() => setMenuOpen(false)}>Studio</Link> : null}
           {user ? <Link className="nova-notification-link" href="/notifications" onClick={() => setMenuOpen(false)}>Notificações{unread > 0 ? <b>{unread > 99 ? '99+' : unread}</b> : null}</Link> : null}
+          {profile?.role === 'ADMIN' ? <Link href="/admin" onClick={() => setMenuOpen(false)}>Admin Center</Link> : null}
           {profile?.role === 'MODERATOR' || profile?.role === 'ADMIN' ? <Link href="/moderation" onClick={() => setMenuOpen(false)}>Moderação</Link> : null}
           <Link href="/faq" onClick={() => setMenuOpen(false)}>FAQ</Link>
           {user ? <Link href={profileHref} onClick={() => setMenuOpen(false)}>Perfil</Link> : null}
@@ -78,6 +86,7 @@ export function NovaHeader({ title }: { title?: string }) {
         <div className="nova-header-actions">
           {user ? (
             <>
+              {profile?.role === 'ADMIN' ? <Link className="nova-role-chip admin" href="/admin" title="Administrador do Archive Nova">✦ ADM</Link> : profile?.role === 'MODERATOR' ? <Link className="nova-role-chip moderator" href="/moderation" title="Moderador do Archive Nova">MOD</Link> : null}
               <Link className="nova-write-button" href="/write"><NovaIcon name="write" size={17} />Escrever</Link>
               <button className="nova-account-button" type="button" onClick={signOut} aria-label="Sair da conta" title="Sair da conta">{(profile?.display_name || profile?.username || user.email || 'U').slice(0, 1).toUpperCase()}</button>
             </>
@@ -87,6 +96,7 @@ export function NovaHeader({ title }: { title?: string }) {
           </button>
         </div>
       </header>
+      {announcement ? <div className="nova-announcement" role="status"><span>✦</span><p>{announcement}</p></div> : null}
       <nav className="nova-mobile-dock" aria-label="Navegação móvel">
         <Link className={pathname === '/feed' ? 'active' : ''} href="/feed"><span><NovaIcon name="feed" size={20} /></span><small>Feed</small></Link>
         <Link className={pathname?.startsWith('/dashboard') ? 'active' : ''} href={user ? '/dashboard' : `/explore?auth=login&return=${encodeURIComponent('/dashboard')}`}><span><NovaIcon name="studio" size={20} /></span><small>Studio</small></Link>
