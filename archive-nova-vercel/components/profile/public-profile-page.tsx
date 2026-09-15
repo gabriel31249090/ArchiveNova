@@ -9,6 +9,7 @@ import { ContributionHeatmap } from '@/components/profile/contribution-heatmap'
 import { NovaIcon } from '@/components/ui/nova-icon'
 import { useNovaConfirm } from '@/components/ui/nova-confirm'
 import { normalizeWorkCard } from '@/lib/work-normalize'
+import { useFeatureFlags } from '@/hooks/use-feature-flags'
 import type { SupportProfile, WorkCardData } from '@/lib/types'
 
 function formatNumber(value:number){return new Intl.NumberFormat('pt-BR',{notation:value>=10000?'compact':'standard',maximumFractionDigits:1}).format(value||0)}
@@ -46,6 +47,8 @@ export function PublicProfilePage({username}:{username:string}){
   const [busy,setBusy]=useState(false)
   const [message,setMessage]=useState('')
   const [error,setError]=useState('')
+  const { flags }=useFeatureFlags()
+  const profileV2=flags.profile_v2!==false
 
   async function load(){
     if(!supabase){setLoading(false);setError('Supabase não configurado.');return}
@@ -122,12 +125,12 @@ export function PublicProfilePage({username}:{username:string}){
     <main className="profile-page profile-v47">
       <section
         className={'profile-cover profile-cover-v47 '+(profile.banner_url?'has-image':'')}
-        style={profile.banner_url?{backgroundImage:'linear-gradient(180deg,rgba(0,0,0,.02),rgba(0,0,0,.45)),url("'+profile.banner_url.replaceAll('"','%22')+'")'}:undefined}
+        style={profileV2&&profile.banner_url?{backgroundImage:'linear-gradient(180deg,rgba(0,0,0,.02),rgba(0,0,0,.45)),url("'+profile.banner_url.replaceAll('"','%22')+'")'}:undefined}
       ><div className="profile-orbit one"/><div className="profile-orbit two"/></section>
 
       <section className="profile-hero profile-hero-v47">
         <div className="profile-avatar-large profile-avatar-v47">
-          {profile.avatar_url?<img src={profile.avatar_url} alt={'Avatar de '+(profile.display_name||profile.username)}/>:<span>{(profile.display_name||profile.username).slice(0,1).toUpperCase()}</span>}
+          {profileV2&&profile.avatar_url?<img src={profile.avatar_url} alt={'Avatar de '+(profile.display_name||profile.username)}/>:<span>{(profile.display_name||profile.username).slice(0,1).toUpperCase()}</span>}
           <i>✦</i>
         </div>
         <div className="profile-identity">
@@ -138,12 +141,12 @@ export function PublicProfilePage({username}:{username:string}){
             {profile.role==='ADMIN'?<b className="profile-role-badge admin">✦ Administrador</b>:profile.role==='MODERATOR'?<b className="profile-role-badge moderator">◆ Moderador</b>:null}
           </div>
           <p className="profile-bio">{profile.bio||'Este autor ainda não escreveu uma bio.'}</p>
-          <div className="profile-meta-v47">
+          {profileV2?<div className="profile-meta-v47">
             {profile.location?<span><NovaIcon name="user" size={14}/>{profile.location}</span>:null}
             {profile.website_url?<a href={profile.website_url} target="_blank" rel="noreferrer"><NovaIcon name="external" size={14}/>Site</a>:null}
             <span>No Archive Nova desde {joined}.</span>
-          </div>
-          {favoriteFandoms.length?<div className="profile-fandoms-v47">{favoriteFandoms.map(item=><span key={item}>✦ {item}</span>)}</div>:null}
+          </div>:null}
+          {profileV2&&favoriteFandoms.length?<div className="profile-fandoms-v47">{favoriteFandoms.map(item=><span key={item}>✦ {item}</span>)}</div>:null}
         </div>
 
         <div className="profile-actions">
@@ -175,14 +178,14 @@ export function PublicProfilePage({username}:{username:string}){
         <div><strong>{formatNumber(stats.following||0)}</strong><span>seguindo</span></div>
       </section>
 
-      {featured?<section className="profile-featured-v47">
+      {profileV2&&featured?<section className="profile-featured-v47">
         <div><p className="eyebrow">Destaque do autor</p><h2>{featured.title}</h2><p>{featured.summary||'Sem resumo.'}</p><div><span>{formatNumber(featured.word_count)} palavras</span><span>{featured.chapter_count} cap.</span><span><NovaIcon name="heart" size={15}/> {formatNumber(featured.kudos_count)}</span></div></div>
         <Link className="primary-button" href={'/works/'+featured.id}>Ler obra <NovaIcon name="arrowRight" size={16}/></Link>
       </section>:null}
 
       <ContributionHeatmap days={calendar}/>
 
-      {((payload.series||[]).length||(payload.collections||[]).length)?<section className="profile-groups-v47">
+      {profileV2&&((payload.series||[]).length||(payload.collections||[]).length)?<section className="profile-groups-v47">
         {(payload.series||[]).length?<div><header><p className="eyebrow">Séries</p><h2>Séries públicas</h2></header>{payload.series?.map(item=><Link key={item.id} href={'/series/'+item.id}><div><strong>{item.title}</strong><p>{item.summary||'Sem descrição.'}</p></div><span>{item.work_count} obras <NovaIcon name="arrowRight" size={15}/></span></Link>)}</div>:null}
         {(payload.collections||[]).length?<div><header><p className="eyebrow">Coleções</p><h2>Coleções públicas</h2></header>{payload.collections?.map(item=><Link key={item.id} href={'/collections/'+item.id}><div><strong>{item.name}</strong><p>{item.description||'Sem descrição.'}</p></div><span>{item.work_count} obras <NovaIcon name="arrowRight" size={15}/></span></Link>)}</div>:null}
       </section>:null}
