@@ -6,6 +6,7 @@ import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { NovaHeader } from '@/components/shared/nova-header'
 import { NovaIcon } from '@/components/ui/nova-icon'
+import { useFeatureFlags } from '@/hooks/use-feature-flags'
 
 type OwnWork={id:string;title:string;status:string;visibility:string}
 
@@ -27,6 +28,8 @@ export function ProfileSettings() {
   const [busy,setBusy]=useState(false)
   const [message,setMessage]=useState('')
   const [error,setError]=useState('')
+  const { flags }=useFeatureFlags()
+  const profileV2=flags.profile_v2!==false
 
   useEffect(()=>{
     if(!supabase){setLoading(false);return}
@@ -99,24 +102,24 @@ export function ProfileSettings() {
       <section className="settings-head"><div><p className="eyebrow">Perfil 2.0</p><h1>Seu espaço no Archive Nova</h1><p>Personalize sua identidade sem transformar o arquivo em uma disputa por números.</p></div><Link className="secondary-button" href={'/users/'+encodeURIComponent(username)}>Ver perfil público ↗</Link></section>
 
       <form className="profile-settings-grid-v47" onSubmit={submit}>
-        <aside className="profile-settings-preview-v47">
+        {profileV2?<aside className="profile-settings-preview-v47">
           <div className="profile-settings-banner-v47" style={bannerUrl?{backgroundImage:'linear-gradient(180deg,transparent,rgba(0,0,0,.22)),url("'+bannerUrl.replaceAll('"','%22')+'")'}:undefined}/>
           <div className="profile-settings-avatar-v47">{avatarUrl?<img src={avatarUrl} alt="Prévia do avatar"/>:<span>{previewLetter}</span>}<i>✦</i></div>
           <strong>{displayName||username}</strong><small>@{username}</small>
           {location?<p><NovaIcon name="user" size={14}/> {location}</p>:null}
           {websiteUrl?<a href={websiteUrl} target="_blank" rel="noreferrer"><NovaIcon name="external" size={14}/> Site</a>:null}
-        </aside>
+        </aside>:null}
 
         <section className="settings-card profile-settings-fields-v47">
           <div className="settings-form-fields">
-            <div className="profile-settings-row-v47">
+            <div className={profileV2?'profile-settings-row-v47':''}>
               <label>Nome de exibição<input value={displayName} onChange={e=>setDisplayName(e.target.value)} maxLength={120} placeholder={username}/><small>Seu @username continua sendo @{username}.</small></label>
-              <label>Localização opcional<input value={location} onChange={e=>setLocation(e.target.value)} maxLength={120} placeholder="Ex.: Brasil"/></label>
+              {profileV2?<label>Localização opcional<input value={location} onChange={e=>setLocation(e.target.value)} maxLength={120} placeholder="Ex.: Brasil"/></label>:null}
             </div>
 
             <label>Bio<textarea value={bio} onChange={e=>setBio(e.target.value)} rows={7} maxLength={4000} placeholder="Conte sobre você, seus fandoms e o que gosta de escrever…"/><small>{bio.length}/4000</small></label>
 
-            <div className="profile-settings-row-v47">
+            {profileV2?<><div className="profile-settings-row-v47">
               <label>Avatar por URL<input type="url" value={avatarUrl} onChange={e=>setAvatarUrl(e.target.value)} placeholder="https://…"/><small>Imagem quadrada funciona melhor.</small></label>
               <label>Banner por URL<input type="url" value={bannerUrl} onChange={e=>setBannerUrl(e.target.value)} placeholder="https://…"/><small>Imagem horizontal para o topo do perfil.</small></label>
             </div>
@@ -124,7 +127,7 @@ export function ProfileSettings() {
             <label>Site / portfólio<input type="url" value={websiteUrl} onChange={e=>setWebsiteUrl(e.target.value)} placeholder="https://…"/></label>
             <label>Fandoms favoritos<input value={favoriteFandoms} onChange={e=>setFavoriteFandoms(e.target.value)} placeholder="Archive Nova, Fantasia, Ficção científica"/><small>Separe por vírgulas. Até 12 itens; você escolhe se quer mostrar isso publicamente.</small></label>
 
-            <label>Obra destacada<select value={featuredWorkId} onChange={e=>setFeaturedWorkId(e.target.value)}><option value="">Nenhuma obra destacada</option>{works.map(work=><option key={work.id} value={work.id}>{work.title} · {work.status}</option>)}</select><small>Aparece em destaque no topo do seu perfil quando a obra estiver pública.</small></label>
+            <label>Obra destacada<select value={featuredWorkId} onChange={e=>setFeaturedWorkId(e.target.value)}><option value="">Nenhuma obra destacada</option>{works.map(work=><option key={work.id} value={work.id}>{work.title} · {work.status}</option>)}</select><small>Aparece em destaque no topo do seu perfil quando a obra estiver pública.</small></label></>:null}
 
             {error?<div className="studio-alert error">{error}</div>:null}
             {message?<div className="studio-alert success">{message}</div>:null}
