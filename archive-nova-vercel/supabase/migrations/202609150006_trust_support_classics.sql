@@ -205,7 +205,7 @@ $$;
 
 drop trigger if exists chapters_novashield_pending on public.chapters;
 create trigger chapters_novashield_pending
-after insert or update of title,content,status or delete on public.chapters
+after insert or delete or update of title,content,status on public.chapters
 for each row execute function public.novashield_mark_chapter_work_pending();
 
 revoke execute on function public.novashield_mark_work_pending() from public,anon,authenticated;
