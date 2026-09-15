@@ -75,7 +75,7 @@ begin
 end;
 $$;
 
-do $$
+do $
 declare
   table_name text;
 begin
@@ -90,15 +90,17 @@ begin
     'draft_inline_comments'
   ]
   loop
-    execute format('drop trigger if exists %I on public.%I', table_name || '_active_account_guard', table_name);
-    execute format(
-      'create trigger %I before insert or update or delete on public.%I for each row execute function public.enforce_active_account_write()',
-      table_name || '_active_account_guard',
-      table_name
-    );
+    if to_regclass(format('public.%I', table_name)) is not null then
+      execute format('drop trigger if exists %I on public.%I', table_name || '_active_account_guard', table_name);
+      execute format(
+        'create trigger %I before insert or update or delete on public.%I for each row execute function public.enforce_active_account_write()',
+        table_name || '_active_account_guard',
+        table_name
+      );
+    end if;
   end loop;
 end;
-$$;
+$;
 
 -- Public content from suspended/deleted creators disappears for normal readers,
 -- while the owner and staff can still inspect it.
