@@ -16,6 +16,7 @@ type AdminSection =
   | 'ads'
   | 'faq'
   | 'support'
+  | 'sac'
   | 'audit'
   | 'analytics'
   | 'health'
@@ -140,6 +141,7 @@ const NAV: Array<{ key: AdminSection; label: string; group?: string }> = [
   { key: 'ads', label: 'Publicidade', group: 'Operação' },
   { key: 'faq', label: 'FAQ' },
   { key: 'support', label: 'Apoio' },
+  { key: 'sac', label: 'SAC · NovaCare' },
   { key: 'audit', label: 'Audit Log', group: 'Sistema' },
   { key: 'health', label: 'Saúde & flags' },
   { key: 'settings', label: 'Configurações' },
@@ -487,7 +489,7 @@ export function AdminCenter({ section }: { section: string }) {
         <aside className="admin-sidebar">
           <div className="admin-sidebar-brand"><span>✦</span><div><strong>Archive Nova</strong><small>Admin Center</small></div></div>
           <nav>{NAV.map((item, index) => <div key={item.key}>{item.group && (index === 0 || NAV[index - 1]?.group !== item.group) ? <p>{item.group}</p> : null}<Link className={currentSection === item.key ? 'active' : ''} href={item.key === 'overview' ? '/admin' : `/admin/${item.key}`}>{item.label}</Link></div>)}</nav>
-          <footer><Link href="/moderation">Central de Moderação</Link><Link href="/">Voltar ao site</Link></footer>
+          <footer><Link href="/moderation">Central de Moderação</Link><Link href="/sac/staff">NovaCare Staff</Link><Link href="/">Voltar ao site</Link></footer>
         </aside>
 
         <div className="admin-content">
@@ -525,6 +527,7 @@ export function AdminCenter({ section }: { section: string }) {
           {currentSection === 'ads' ? <PortalSection title="Publicidade" description="Campanhas e solicitações agora são controladas exclusivamente por administradores." href="/advertise" action="Gerenciar publicidade" stats={[['Solicitações abertas', fmt(dashboard.trust?.open_ad_requests)], ['Campanhas ativas', fmt(dashboard.trust?.active_campaigns)]]} /> : null}
           {currentSection === 'faq' ? <PortalSection title="FAQ" description="Editar, publicar e ocultar perguntas da Central de Ajuda é uma função administrativa." href="/faq" action="Gerenciar FAQ" /> : null}
           {currentSection === 'support' ? <PortalSection title="Apoio ao Archive Nova" description="As configurações de apoio institucional ficam restritas ao administrador. Autores continuam podendo configurar o próprio apoio." href="/settings/support" action="Configurar apoio" /> : null}
+          {currentSection === 'sac' ? <PortalSection title="NovaCare · SAC" description="Central operacional para chamados de conta, bugs, moderação, privacidade e sugestões. Administradores e moderadores podem assumir, priorizar e responder atendimentos." href="/sac/staff" action="Abrir fila do NovaCare" stats={[['Canal', 'Interno'], ['Histórico', 'Auditável'], ['Equipe', 'ADM + MOD']]} /> : null}
 
           {currentSection === 'audit' ? <section className="admin-section">
             <div className="admin-section-head"><div><h2>Audit Log</h2><p>Histórico de ações administrativas e de moderação sensíveis.</p></div><button className="secondary-button" onClick={() => void loadAudit()}>Atualizar</button></div>
