@@ -8,6 +8,7 @@ import { WorkCard } from '@/components/work-card'
 import { NovaIcon } from '@/components/ui/nova-icon'
 import { normalizeWorkCard } from '@/lib/work-normalize'
 import { fullNumber } from '@/lib/format'
+import { useFeatureFlags } from '@/hooks/use-feature-flags'
 import type { FandomStat, LayoutMode, SortMode, WorkCardData, WorkFilters } from '@/lib/types'
 
 const PAGE_SIZE=18
@@ -43,6 +44,9 @@ export function ExploreV47(){
   const [suggestionsOpen,setSuggestionsOpen]=useState(false)
   const [saved,setSaved]=useState<SavedSearch[]>([])
   const [authenticated,setAuthenticated]=useState(false)
+  const { flags }=useFeatureFlags()
+  const discoveryV2=flags.discovery_v2!==false
+  const savedSearchesEnabled=flags.saved_searches!==false
 
   useEffect(()=>{
     const params=new URLSearchParams(window.location.search)
@@ -87,13 +91,15 @@ export function ExploreV47(){
       })))
       const isAuthed=Boolean(authResponse.data.user)
       setAuthenticated(isAuthed)
-      if(isAuthed){
+      if(isAuthed&&savedSearchesEnabled){
         const {data}=await supabase.rpc('saved_searches_list')
         if(active)setSaved((data||[]) as SavedSearch[])
+      }else if(active){
+        setSaved([])
       }
     })
     return()=>{active=false}
-  },[supabase])
+  },[supabase,savedSearchesEnabled])
 
   const load=useCallback(async()=>{
     if(!supabase){setError('Supabase não configurado.');setLoading(false);return}
@@ -128,7 +134,7 @@ export function ExploreV47(){
   useEffect(()=>{void load()},[load])
 
   useEffect(()=>{
-    if(!supabase||debouncedQuery.length<2){
+    if(!supabase||!discoveryV2||debouncedQuery.length<2){
       setSuggestions({})
       setSuggestionsOpen(false)
       return
@@ -141,7 +147,7 @@ export function ExploreV47(){
       }
     })
     return()=>{active=false}
-  },[supabase,debouncedQuery])
+  },[supabase,debouncedQuery,discoveryV2])
 
   async function toggleBookmark(work:WorkCardData){
     if(!supabase)return
@@ -189,7 +195,7 @@ export function ExploreV47(){
   }
 
   async function saveCurrentSearch(){
-    if(!supabase)return
+    if(!supabase||!savedSearchesEnabled)return
     if(!authenticated){
       window.location.href='/explore?auth=login&return=%2Fexplore'
       return
@@ -237,7 +243,7 @@ export function ExploreV47(){
         autoComplete="off"
       />
       <kbd>Ctrl K</kbd>
-      {suggestionsOpen&&debouncedQuery.length>=2?<div className="search-suggestions-v47" onMouseDown={e=>e.preventDefault()}>
+      {discoveryV2&&suggestionsOpen&&debouncedQuery.length>=2?<div className="search-suggestions-v47" onMouseDown={e=>e.preventDefault()}>
         {(suggestions.works||[]).length?<section><span>OBRAS</span>{suggestions.works?.map(item=><Link key={item.id} href={'/works/'+item.id} onClick={()=>setSuggestionsOpen(false)}><NovaIcon name="book" size={16}/><div><strong>{item.title}</strong><small>por @{item.author_username}</small></div></Link>)}</section>:null}
         {(suggestions.authors||[]).length?<section><span>AUTORES</span>{suggestions.authors?.map(item=><Link key={item.id} href={'/users/'+encodeURIComponent(item.username)} onClick={()=>setSuggestionsOpen(false)}><NovaIcon name="user" size={16}/><div><strong>{item.display_name}</strong><small>@{item.username} · {item.followers} seguidores</small></div></Link>)}</section>:null}
         {(suggestions.fandoms||[]).length?<section><span>FANDOMS</span>{suggestions.fandoms?.map(item=><Link key={item.id} href={'/fandoms/'+encodeURIComponent(item.slug)} onClick={()=>setSuggestionsOpen(false)}><span>✦</span><div><strong>{item.name}</strong><small>{item.work_count} obras</small></div></Link>)}</section>:null}
@@ -260,7 +266,7 @@ export function ExploreV47(){
           <p>Busca por obra, autor, fandom e tags com sugestões instantâneas, filtros salvos e descoberta transparente.</p>
         </div>
         <div className="explore-v47-tools">
-          <button className="secondary-button" type="button" onClick={()=>void saveCurrentSearch()}><NovaIcon name="bookmark" size={18}/> Salvar busca</button>
+          {savedSearchesEnabled?<button className="secondary-button" type="button" onClick={()=>void saveCurrentSearch()}><NovaIcon name="bookmark" size={18}/> Salvar busca</button>:null}
           <div className="segmented">
             <button className={layout==='grid'?'active':''} onClick={()=>setLayout('grid')} aria-label="Grade"><NovaIcon name="grid" size={17}/></button>
             <button className={layout==='list'?'active':''} onClick={()=>setLayout('list')} aria-label="Lista"><NovaIcon name="list" size={17}/></button>
@@ -268,7 +274,7 @@ export function ExploreV47(){
         </div>
       </header>
 
-      {saved.length?<div className="saved-searches-v47"><span>BUSCAS SALVAS</span>{saved.slice(0,6).map(item=><div key={item.id}><button type="button" onClick={()=>applySaved(item)}>{item.name}</button><button type="button" aria-label={'Excluir '+item.name} onClick={()=>void deleteSaved(item.id)}><NovaIcon name="close" size={13}/></button></div>)}</div>:null}
+      {savedSearchesEnabled&&saved.length?<div className="saved-searches-v47"><span>BUSCAS SALVAS</span>{saved.slice(0,6).map(item=><div key={item.id}><button type="button" onClick={()=>applySaved(item)}>{item.name}</button><button type="button" aria-label={'Excluir '+item.name} onClick={()=>void deleteSaved(item.id)}><NovaIcon name="close" size={13}/></button></div>)}</div>:null}
 
       <div className={'explore-v47-layout '+(filtersOpen?'with-filters':'without-filters')}>
         {filtersOpen?<aside className="filters-panel explore-v47-filters">
