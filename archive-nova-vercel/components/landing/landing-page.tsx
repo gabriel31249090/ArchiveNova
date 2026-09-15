@@ -25,10 +25,12 @@ const EMPTY_STATS: LandingStats = { works: 0, fandoms: 0, users: 0, words: 0 }
 
 const PLATFORM_FEATURES: ReadonlyArray<readonly [string, string, string, NovaIconName]> = [
   ['Writer Cloud', 'Rascunhos sincronizados entre dispositivos, autosave e capítulos organizados.', '/write', 'cloud'],
+  ['NovaShield', 'Triagem explicável de risco que prioriza revisão humana sem banimento automático.', '/trust', 'shield'],
+  ['ArchiveNova Classics', 'Clássicos em domínio público com autoria, fonte e direitos preservados.', '/classics', 'book'],
+  ['NovaCare', 'SAC interno para bugs, conta, moderação, privacidade e sugestões.', '/sac', 'help'],
   ['Feed transparente', 'Recomendações com o motivo de cada história aparecer para você.', '/feed', 'feed'],
   ['Posts da comunidade', 'Atualizações, imagens, enquetes e conversas entre leitores e escritores.', '/posts', 'posts'],
   ['Colaboração revisável', 'Contribuições inspiradas em pull requests: revisar, pedir mudanças e mesclar.', '/faq', 'branch'],
-  ['Apoio direto', 'Autores podem compartilhar PIX e outros meios de apoio sem intermediação.', '/support', 'heart'],
   ['Busca sem ranking secreto', 'Fandoms, tags, classificação, tamanho e filtros continuam sob seu controle.', '/explore', 'search'],
 ]
 
@@ -139,6 +141,7 @@ export function LandingPage() {
             <Link href="/explore">Explorar</Link>
             <Link href="/feed">Feed</Link>
             <Link href="/posts">Posts</Link>
+            <Link href="/classics">Classics</Link>
             <Link href="/faq">FAQ</Link>
           </div>
 
@@ -152,8 +155,8 @@ export function LandingPage() {
       <section className="landing-hero landing-v4-hero" id="arquivo">
         <div className="landing-hero-copy landing-v4-copy">
           <div className="landing-v4-badge-row">
-            <div className="landing-kicker"><span /> Archive Nova v4</div>
-            <span className="landing-v4-live"><i /> comunidade + escrita</span>
+            <div className="landing-kicker"><span /> Archive Nova v4.8</div>
+            <span className="landing-v4-live"><i /> trust + criação</span>
           </div>
 
           <h1>
@@ -161,8 +164,8 @@ export function LandingPage() {
           </h1>
           <p>
             Leia, escreva, publique, converse e colabore em um arquivo comunitário feito para pessoas.
-            O Archive Nova reúne busca detalhada, Writer Cloud, posts, feed transparente e ferramentas
-            de colaboração sem esconder suas escolhas atrás de um ranking secreto.
+            O Archive Nova reúne Writer Cloud, Classics, NovaCare, feed transparente e uma camada de
+            Trust & Safety explicável — sem esconder decisões importantes atrás de uma caixa-preta.
           </p>
 
           <div className="landing-hero-actions">
@@ -171,9 +174,9 @@ export function LandingPage() {
           </div>
 
           <div className="landing-v4-trust">
-            <span><b aria-hidden="true">✦</b> recomendações explicáveis</span>
+            <span><b><NovaIcon name="shield" size={15} /></b> NovaShield + revisão humana</span>
             <span><b><NovaIcon name="cloud" size={15} /></b> rascunhos na nuvem</span>
-            <span><b><NovaIcon name="branch" size={15} /></b> colaboração revisável</span>
+            <span><b><NovaIcon name="book" size={15} /></b> clássicos em domínio público</span>
           </div>
         </div>
 
@@ -350,7 +353,7 @@ export function LandingPage() {
 
       <section className="landing-cta landing-v4-cta" data-landing-reveal>
         <div>
-          <span>ARCHIVE NOVA · V4</span>
+          <span>ARCHIVE NOVA · V4.8</span>
           <h2>Leia uma história. Escreva outra. Ajude uma terceira a ficar ainda melhor.</h2>
         </div>
         <div className="landing-cta-actions">
@@ -369,6 +372,8 @@ export function LandingPage() {
           <Link href="/explore">Explorar</Link>
           <Link href="/feed">Feed</Link>
           <Link href="/posts">Posts</Link>
+          <Link href="/classics">Classics</Link>
+          <Link href="/trust">Trust & Safety</Link>
           <Link href="/faq">FAQ</Link>
           <Link href="/support">Apoiar</Link>
         </div>
