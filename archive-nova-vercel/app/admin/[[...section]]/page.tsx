@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { AdminCenter } from '@/components/admin/admin-center'
+import '../../novadrop-v47-shared.css'
 
 export const metadata: Metadata = {
   title: 'Admin Center',

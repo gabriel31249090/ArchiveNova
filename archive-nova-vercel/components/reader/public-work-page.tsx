@@ -309,13 +309,29 @@ export function PublicWorkPage({ workId }: { workId: string }) {
           <div className="public-work-stats"><span><strong>{fmt(work.word_count)}</strong> palavras</span><span><strong>{work.chapter_count}{work.expected_chapters ? `/${work.expected_chapters}` : ''}</strong> capítulos</span><span><strong>{fmt(work.hits_count)}</strong> leituras</span><span><strong>{fmt(work.kudos_count)}</strong> kudos</span><span><strong>{fmt(work.comments_count)}</strong> comentários</span></div>
           {work.series?.length ? <div className="public-work-series">{work.series.map((item) => <Link key={item.id} href={`/series/${item.id}`}><span>Parte {item.position}</span><strong>{item.title}</strong></Link>)}</div> : null}
           <div className="public-work-actions">
-            <button className={`reader-social-button ${work.kudosed ? 'active' : ''}`} disabled={busy} onClick={toggleKudos}>{work.kudosed ? <><NovaIcon name="heart" size={16} /> Kudos</> : <><NovaIcon name="heart" size={16} /> Dar kudos</>}</button>
-            <button className={`reader-social-button ${work.bookmarked ? 'active' : ''}`} disabled={busy} onClick={toggleBookmark}>{work.bookmarked ? <><NovaIcon name="bookmark" size={16} /> Salva</> : <><NovaIcon name="bookmark" size={16} /> Bookmark</>}</button>
-            {!isOwner ? <button className={`reader-social-button ${work.subscribed ? 'active' : ''}`} disabled={busy} onClick={toggleSubscription}>{work.subscribed ? <><NovaIcon name="check" size={16} /> Acompanhando</> : <><NovaIcon name="plus" size={16} /> Acompanhar</>}</button> : <Link className="reader-social-button active" href={`/works/${work.id}/manage`}><NovaIcon name="settings" size={16} /> Gerenciar</Link>}
-            {isOwner ? <Link className="reader-social-button" href={`/works/${work.id}/contribute`}><NovaIcon name="branch" size={16} /> Contribuições</Link> : work.allow_contributions ? <Link className="reader-social-button" href={`/works/${work.id}/contribute`}><NovaIcon name="branch" size={16} /> Contribuir</Link> : null}
-            {!isOwner && supportEnabled ? <Link className="reader-social-button support" href={`/support/${encodeURIComponent(work.author_username)}`}><NovaIcon name="heart" size={16} /> Apoiar autor</Link> : null}
-            {!isOwner ? <button className="reader-social-button subtle" onClick={() => setReportTarget({ type: 'work', id: work.id, label: work.title })}><NovaIcon name="flag" size={16} /> Denunciar</button> : null}
-            <button className={`reader-social-button ${offlineSaved ? 'active' : ''}`} onClick={() => void saveOfflineCopy()}><NovaIcon name="bookmark" size={16} /> {offlineSaved ? 'Offline ✓' : 'Salvar offline'}</button>
+            <button
+              className={`reader-social-button reader-social-primary kudos ${work.kudosed ? 'active' : ''}`}
+              disabled={busy}
+              aria-pressed={Boolean(work.kudosed)}
+              onClick={toggleKudos}
+            >
+              <span className="reader-social-icon"><NovaIcon name="heart" size={23} strokeWidth={2} variant={work.kudosed ? 'solid' : 'outline'} /></span>
+              <span>{work.kudosed ? 'Kudos' : 'Dar kudos'}</span>
+            </button>
+            <button
+              className={`reader-social-button reader-social-primary bookmark ${work.bookmarked ? 'active' : ''}`}
+              disabled={busy}
+              aria-pressed={Boolean(work.bookmarked)}
+              onClick={toggleBookmark}
+            >
+              <span className="reader-social-icon"><NovaIcon name="bookmark" size={23} strokeWidth={2} variant={work.bookmarked ? 'solid' : 'outline'} /></span>
+              <span>{work.bookmarked ? 'Salva' : 'Bookmark'}</span>
+            </button>
+            {!isOwner ? <button className={`reader-social-button ${work.subscribed ? 'active' : ''}`} disabled={busy} aria-pressed={Boolean(work.subscribed)} onClick={toggleSubscription}>{work.subscribed ? <><NovaIcon name="check" size={19} /> Acompanhando</> : <><NovaIcon name="plus" size={19} /> Acompanhar</>}</button> : <Link className="reader-social-button active" href={`/works/${work.id}/manage`}><NovaIcon name="settings" size={19} /> Gerenciar</Link>}
+            {isOwner ? <Link className="reader-social-button" href={`/works/${work.id}/contribute`}><NovaIcon name="branch" size={19} /> Contribuições</Link> : work.allow_contributions ? <Link className="reader-social-button" href={`/works/${work.id}/contribute`}><NovaIcon name="branch" size={19} /> Contribuir</Link> : null}
+            {!isOwner && supportEnabled ? <Link className="reader-social-button support" href={`/support/${encodeURIComponent(work.author_username)}`}><NovaIcon name="heart" size={19} /> Apoiar autor</Link> : null}
+            {!isOwner ? <button className="reader-social-button subtle" onClick={() => setReportTarget({ type: 'work', id: work.id, label: work.title })}><NovaIcon name="flag" size={19} /> Denunciar</button> : null}
+            <button className={`reader-social-button ${offlineSaved ? 'active' : ''}`} onClick={() => void saveOfflineCopy()}><NovaIcon name="cloud" size={19} /> {offlineSaved ? 'Offline ✓' : 'Salvar offline'}</button>
             {!isOwner ? <select className="reader-library-select" value={libraryState} onChange={(event) => { if (event.target.value) void setLibraryState(event.target.value as LibraryState) }} aria-label="Adicionar à biblioteca"><option value="">Biblioteca…</option><option value="TO_READ">Quero ler</option><option value="READING">Lendo</option><option value="COMPLETED">Concluída</option><option value="FAVORITE">Favorita</option></select> : null}
           </div>
         </section>

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import type { WorkCardData } from '@/lib/types'
+import { NovaIcon } from '@/components/ui/nova-icon'
 
 function ratingShort(rating: WorkCardData['rating']) {
   return ({ GENERAL: 'G', TEEN: 'T', MATURE: 'M', EXPLICIT: 'E', NOT_RATED: '?' } as const)[rating]
@@ -38,9 +39,11 @@ export function WorkCard({
           type="button"
           className={`bookmark-btn ${work.bookmarked ? 'saved' : ''}`}
           aria-label={work.bookmarked ? 'Remover bookmark' : 'Adicionar bookmark'}
+          aria-pressed={Boolean(work.bookmarked)}
+          title={work.bookmarked ? 'Remover bookmark' : 'Salvar na biblioteca'}
           onClick={() => onBookmark(work)}
         >
-          {work.bookmarked ? '★' : '☆'}
+          <NovaIcon name="bookmark" size={22} strokeWidth={2} variant={work.bookmarked ? 'solid' : 'outline'} />
         </button>
       </div>
 
@@ -60,8 +63,8 @@ export function WorkCard({
       <div className="work-meta">
         <span>{formatNumber(work.word_count)} palavras</span>
         <span>{work.chapter_count}{work.expected_chapters ? `/${work.expected_chapters}` : ''} cap.</span>
-        <span>♥ {formatNumber(work.kudos_count)}</span>
-        <span>◌ {formatNumber(work.hits_count)}</span>
+        <span className="work-meta-icon"><NovaIcon name="heart" size={14} strokeWidth={2} /> {formatNumber(work.kudos_count)}</span>
+        <span className="work-meta-icon"><NovaIcon name="eye" size={14} strokeWidth={2} /> {formatNumber(work.hits_count)}</span>
       </div>
     </article>
   )

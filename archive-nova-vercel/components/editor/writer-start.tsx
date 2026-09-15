@@ -1,11 +1,19 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { createClient } from '@/lib/supabase/client'
 import { clearLocalWriterDraft, htmlToPlainText, readLocalWriterDraft } from '@/lib/writer-draft'
-import { StoryEditor } from '@/components/editor/story-editor'
 
 const EMPTY_DOC = { type: 'doc', content: [{ type: 'paragraph' }] }
+
+const StoryEditor = dynamic(
+  () => import('@/components/editor/story-editor').then((module) => module.StoryEditor),
+  {
+    ssr: false,
+    loading: () => <main className="writer-cloud-loading"><span>✦</span><h1>Abrindo o Writer…</h1><p>Carregando as ferramentas de edição somente quando necessárias.</p></main>,
+  },
+)
 
 export function WriterStart() {
   const configured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
