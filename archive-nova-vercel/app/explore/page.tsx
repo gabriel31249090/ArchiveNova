@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import '../novadrop-v47.css'
 import { ArchiveNovaApp } from '@/components/archive-nova-app'
 import { ExploreV47 } from '@/components/explore/explore-v47'
 
