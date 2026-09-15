@@ -13,6 +13,7 @@ export default function robots(): MetadataRoute.Robots {
         '/moderation',
         '/notifications',
         '/publish',
+        '/sac',
         '/settings',
         '/write',
       ],
