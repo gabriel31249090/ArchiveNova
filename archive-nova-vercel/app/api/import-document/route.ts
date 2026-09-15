@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
 import sanitizeHtml from 'sanitize-html'
+import { createClient } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024
+const MAX_REQUEST_SIZE = MAX_FILE_SIZE + 1024 * 1024
 
 function escapeHtml(value: string) {
   return value
@@ -191,6 +193,29 @@ function detectTitle(html: string, fallbackName: string) {
 
 export async function POST(request: Request) {
   try {
+    const contentLength = Number(request.headers.get('content-length') || '0')
+    if (Number.isFinite(contentLength) && contentLength > MAX_REQUEST_SIZE) {
+      return NextResponse.json({ error: 'A requisição excede o limite permitido.' }, { status: 413 })
+    }
+
+    const supabase = await createClient()
+    const { data: authData, error: authError } = await supabase.auth.getUser()
+    if (authError || !authData.user) {
+      return NextResponse.json({ error: 'Entre na sua conta para importar documentos.' }, { status: 401 })
+    }
+
+    const { error: rateError } = await supabase.rpc('writer_consume_import_rate_limit')
+    if (rateError) {
+      if (rateError.message.includes('RATE_LIMITED')) {
+        return NextResponse.json(
+          { error: 'Muitas importações em pouco tempo. Tente novamente em alguns minutos.' },
+          { status: 429, headers: { 'Retry-After': '600' } },
+        )
+      }
+      console.error('Falha no rate limit do importador:', rateError)
+      return NextResponse.json({ error: 'Não foi possível validar a importação agora.' }, { status: 503 })
+    }
+
     const formData = await request.formData()
     const file = formData.get('file')
 

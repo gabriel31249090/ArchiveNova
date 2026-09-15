@@ -1,6 +1,6 @@
 {
   "name": "archive-nova",
-  "version": "4.8.0",
+  "version": "4.9.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -42,7 +42,5 @@
     "@types/sanitize-html": "2.16.1",
     "typescript": "^7.0.2"
   },
-  "engines": {
-    "node": "22.x"
-  }
+  "engines": { "node": "22.x" }
 }

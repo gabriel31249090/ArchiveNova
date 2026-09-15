@@ -1,4 +1,4 @@
-const FALLBACK_SITE_URL = 'https://archive-nova-ewp5.vercel.app'
+const FALLBACK_SITE_URL = 'https://archivenova.vercel.app'
 
 function normalizeSiteUrl(value: string) {
   return value.replace(/\/+$/, '')
