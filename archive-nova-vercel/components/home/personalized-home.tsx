@@ -7,6 +7,7 @@ import { WorkspaceShell } from '@/components/shared/workspace-shell'
 import { WorkCard } from '@/components/work-card'
 import { NovaIcon } from '@/components/ui/nova-icon'
 import { normalizeWorkCard } from '@/lib/work-normalize'
+import { useFeatureFlags } from '@/hooks/use-feature-flags'
 import { compactNumber, fullNumber } from '@/lib/format'
 import type { FandomStat, PlatformStats, WorkCardData } from '@/lib/types'
 
@@ -38,6 +39,7 @@ export function PersonalizedHome(){
   const [payload,setPayload]=useState<HomePayload>({})
   const [loading,setLoading]=useState(true)
   const [error,setError]=useState('')
+  const { enabled }=useFeatureFlags()
 
   const load=useCallback(async()=>{
     if(!supabase){setError('Supabase não configurado.');setLoading(false);return}
@@ -108,7 +110,7 @@ export function PersonalizedHome(){
       {error?<div className="community-message error">{error}<button type="button" onClick={()=>void load()}>Tentar novamente</button></div>:null}
       {loading?<div className="feed-skeleton home-v47-skeleton">{Array.from({length:6}).map((_,i)=><div key={i}/>)}</div>:null}
 
-      {!loading&&continueReading.length?<section className="home-v47-section">
+      {!loading&&enabled('personalized_home')&&continueReading.length?<section className="home-v47-section">
         <header><div><p className="eyebrow">Continue lendo</p><h2>Volte exatamente de onde parou.</h2></div><Link href="/library">Abrir biblioteca →</Link></header>
         <div className="continue-reading-grid">
           {continueReading.map(work=><Link className="continue-reading-card" href={`/works/${work.id}${work.last_chapter_id?`?chapter=${work.last_chapter_id}`:''}`} key={work.id}>
@@ -119,7 +121,7 @@ export function PersonalizedHome(){
         </div>
       </section>:null}
 
-      {!loading&&recommended.length?<section className="home-v47-section">
+      {!loading&&enabled('personalized_home')&&enabled('discovery_v2')&&recommended.length?<section className="home-v47-section">
         <header><div><p className="eyebrow">Para você</p><h2>Recomendações que explicam o porquê.</h2><p>Interesses vêm das suas leituras, fandoms, tags e autores seguidos — com espaço reservado para obras menores.</p></div><Link href="/feed">Ver feed completo →</Link></header>
         <div className="discovery-grid home-v47-work-grid">
           {recommended.slice(0,6).map(item=><div className="discovery-item" key={item.work.id}>
@@ -129,14 +131,14 @@ export function PersonalizedHome(){
         </div>
       </section>:null}
 
-      {!loading&&following.length?<section className="home-v47-section">
+      {!loading&&enabled('personalized_home')&&following.length?<section className="home-v47-section">
         <header><div><p className="eyebrow">Autores que você segue</p><h2>Atualizações do seu círculo.</h2></div><Link href="/feed">Mais atualizações →</Link></header>
         <div className="work-grid">
           {following.slice(0,3).map(item=><WorkCard key={item.work.id} work={item.work} onOpen={openWork} onBookmark={work=>void toggleBookmark(work)}/>)}
         </div>
       </section>:null}
 
-      {!loading&&fandoms.length?<section className="home-v47-section">
+      {!loading&&enabled('fandom_hubs')&&fandoms.length?<section className="home-v47-section">
         <header><div><p className="eyebrow">Fandom Hubs</p><h2>Entre pelos universos que estão em movimento.</h2></div><Link href="/explore">Explorar tudo →</Link></header>
         <div className="category-grid home-v47-fandoms">
           {fandoms.slice(0,8).map((fandom,index)=><Link className="category-card" href={`/fandoms/${encodeURIComponent(fandom.slug)}`} key={fandom.id}>
