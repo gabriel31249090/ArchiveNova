@@ -18,6 +18,7 @@ type AdminSection =
   | 'support'
   | 'audit'
   | 'analytics'
+  | 'health'
   | 'settings'
 
 type DashboardPayload = {
@@ -116,6 +117,19 @@ type AdminSettings = {
   updated_at?: string
 }
 
+type FeatureFlag = {
+  key: string
+  enabled: boolean
+  description: string | null
+  updated_at: string
+}
+
+type HealthPayload = {
+  database?: { size_bytes?: number; public_tables?: number; public_functions?: number; latest_migration?: string | null }
+  security?: { rls_tables_without_policies?: number; suspended_users?: number; rate_events_1h?: number }
+  content?: { public_works?: number; open_reports?: number; scheduled_chapters?: number }
+}
+
 const NAV: Array<{ key: AdminSection; label: string; group?: string }> = [
   { key: 'overview', label: 'Visão geral' },
   { key: 'users', label: 'Usuários' },
@@ -127,6 +141,7 @@ const NAV: Array<{ key: AdminSection; label: string; group?: string }> = [
   { key: 'faq', label: 'FAQ' },
   { key: 'support', label: 'Apoio' },
   { key: 'audit', label: 'Audit Log', group: 'Sistema' },
+  { key: 'health', label: 'Saúde & flags' },
   { key: 'settings', label: 'Configurações' },
 ]
 
@@ -171,6 +186,8 @@ export function AdminCenter({ section }: { section: string }) {
   const [mergeTarget, setMergeTarget] = useState('')
   const [audit, setAudit] = useState<AuditItem[]>([])
   const [analytics, setAnalytics] = useState<AnalyticsDay[]>([])
+  const [health, setHealth] = useState<HealthPayload>({})
+  const [featureFlags, setFeatureFlags] = useState<FeatureFlag[]>([])
   const [settings, setSettings] = useState<AdminSettings>({
     announcement_enabled: false,
     announcement_text: '',
@@ -245,6 +262,18 @@ export function AdminCenter({ section }: { section: string }) {
     setAnalytics((data || []) as AnalyticsDay[])
   }
 
+  async function loadHealth() {
+    if (!supabase) return
+    const [healthResponse, flagsResponse] = await Promise.all([
+      supabase.rpc('admin_health_summary'),
+      supabase.rpc('admin_feature_flags'),
+    ])
+    if (healthResponse.error) throw healthResponse.error
+    if (flagsResponse.error) throw flagsResponse.error
+    setHealth((healthResponse.data || {}) as HealthPayload)
+    setFeatureFlags((flagsResponse.data || []) as FeatureFlag[])
+  }
+
   async function loadSettings() {
     if (!supabase) return
     const { data, error: rpcError } = await supabase.rpc('admin_get_settings')
@@ -273,6 +302,7 @@ export function AdminCenter({ section }: { section: string }) {
       if (currentSection === 'taxonomy') await loadTaxonomy()
       if (currentSection === 'audit') await loadAudit()
       if (currentSection === 'analytics') await loadAnalytics()
+      if (currentSection === 'health') await loadHealth()
       if (currentSection === 'settings') await loadSettings()
     } catch (loadError) {
       console.error(loadError)
@@ -401,6 +431,19 @@ export function AdminCenter({ section }: { section: string }) {
     await loadTaxonomy()
   }
 
+  async function toggleFeatureFlag(flag: FeatureFlag) {
+    if (!supabase) return
+    setBusy('flag-' + flag.key)
+    const { error: rpcError } = await supabase.rpc('admin_set_feature_flag', {
+      flag_key: flag.key,
+      next_enabled: !flag.enabled,
+    })
+    setBusy('')
+    if (rpcError) return flash('Não foi possível atualizar a feature flag.')
+    setFeatureFlags((current) => current.map((item) => item.key === flag.key ? { ...item, enabled: !item.enabled, updated_at: new Date().toISOString() } : item))
+    flash((!flag.enabled ? 'Ativado: ' : 'Desativado: ') + flag.key)
+  }
+
   async function saveSettings(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!supabase) return
@@ -494,6 +537,29 @@ export function AdminCenter({ section }: { section: string }) {
             <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Data</th><th>Usuários</th><th>Obras</th><th>Posts</th><th>Denúncias</th><th>Leituras</th></tr></thead><tbody>{analytics.slice().reverse().map((item) => <tr key={item.date}><td>{item.date}</td><td>{fmt(item.users)}</td><td>{fmt(item.works)}</td><td>{fmt(item.posts)}</td><td>{fmt(item.reports)}</td><td>{fmt(item.hits)}</td></tr>)}</tbody></table></div>
           </section> : null}
 
+          {currentSection === 'health' ? <section className="admin-section admin-health-v47">
+            <div className="admin-section-head"><div><h2>Saúde da plataforma</h2><p>Visão rápida do banco, segurança operacional e recursos liberados no Archive Nova.</p></div><button className="secondary-button" onClick={() => void loadHealth()}>Atualizar</button></div>
+            <div className="admin-analytics-summary">
+              <Metric label="Tabelas públicas" value={health.database?.public_tables} />
+              <Metric label="Funções públicas" value={health.database?.public_functions} />
+              <Metric label="Obras públicas" value={health.content?.public_works} />
+              <Metric label="Denúncias abertas" value={health.content?.open_reports} />
+              <Metric label="Capítulos agendados" value={health.content?.scheduled_chapters} />
+              <Metric label="Rate events / 1h" value={health.security?.rate_events_1h} />
+            </div>
+            <div className="admin-health-details-v47">
+              <article><span>Última migration</span><strong>{health.database?.latest_migration || '—'}</strong></article>
+              <article><span>Tamanho do banco</span><strong>{health.database?.size_bytes ? (Number(health.database.size_bytes) / 1024 / 1024).toFixed(1) + ' MB' : '—'}</strong></article>
+              <article className={Number(health.security?.rls_tables_without_policies || 0) ? 'warn' : 'ok'}><span>RLS sem policy</span><strong>{fmt(health.security?.rls_tables_without_policies)}</strong></article>
+              <article><span>Contas suspensas</span><strong>{fmt(health.security?.suspended_users)}</strong></article>
+            </div>
+
+            <div className="admin-section-head feature-flags-head-v47"><div><h2>Feature flags</h2><p>Desligue módulos novos sem precisar reverter deploys ou apagar dados.</p></div></div>
+            <div className="admin-feature-flags-v47">
+              {featureFlags.map((flag) => <article key={flag.key}><div><code>{flag.key}</code><strong>{flag.enabled ? 'Ativo' : 'Desativado'}</strong><p>{flag.description || 'Sem descrição.'}</p><small>Atualizado {dateTime(flag.updated_at)}</small></div><button className={flag.enabled ? 'secondary-button' : 'primary-button'} disabled={busy === 'flag-' + flag.key} onClick={() => void toggleFeatureFlag(flag)}>{busy === 'flag-' + flag.key ? 'Salvando…' : flag.enabled ? 'Desativar' : 'Ativar'}</button></article>)}
+            </div>
+          </section> : null}
+
           {currentSection === 'settings' ? <section className="admin-section">
             <div className="admin-section-head"><div><h2>Configurações globais</h2><p>Controles que alteram comportamento público do Archive Nova.</p></div></div>
             <form className="admin-settings-form" onSubmit={saveSettings}>
@@ -534,6 +600,7 @@ function Overview({ dashboard }: { dashboard: DashboardPayload }) {
       <Link href="/admin/content"><strong>Conteúdo</strong><span>Ocultar ou restaurar obras, posts e comentários.</span></Link>
       <Link href="/admin/taxonomy"><strong>Taxonomia</strong><span>Fandoms, tags, aliases e organização.</span></Link>
       <Link href="/admin/audit"><strong>Audit Log</strong><span>Rastrear ações administrativas sensíveis.</span></Link>
+      <Link href="/admin/health"><strong>Saúde & flags</strong><span>Banco, segurança e rollout de módulos novos.</span></Link>
       <Link href="/admin/settings"><strong>Configurações</strong><span>Aviso global e controles operacionais.</span></Link>
     </section>
   </div>
