@@ -1,4 +1,4 @@
-const CACHE='archive-nova-v4-9-public-v1'
+const CACHE='archive-nova-v4-9-1-public-v1'
 const CORE=['/','/explore','/offline','/manifest.webmanifest','/icon.svg']
 const PUBLIC_NAVIGATION=new Set(['/','/explore','/offline','/feed','/posts','/classics','/trust','/faq','/support','/advertise'])
 function isPublicNavigation(url){
